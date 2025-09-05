@@ -1,4 +1,7 @@
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
+
 import logging
 import warnings
 from typing import Callable, Dict, List, Optional, Tuple
@@ -7,6 +10,7 @@ import torch
 from torch.optim import SGD as CPUSGD
 from torch.optim import AdamW as CPUAdam
 
+"""
 try:
     from transformer_engine.pytorch.optimizers import FusedAdam as Adam
     from transformer_engine.pytorch.optimizers import FusedSGD as SGD
@@ -23,6 +27,14 @@ except ImportError:
         # pylint: disable-next=line-too-long.
         # See https://github.com/NVIDIA/apex/blob/7b73b12361068a10b0f44844534613f252a5ea75/apex/optimizers/fused_adam.py#L16.
         from torch.optim import AdamW as Adam, SGD
+"""
+warnings.warn(f"Transformer Engine and Apex are not installed. Falling back to Torch optimizers.")
+
+# Apex's FusedAdam is a drop-in replacement for torch's AdamW.
+# pylint: disable-next=line-too-long.
+# See https://github.com/NVIDIA/apex/blob/7b73b12361068a10b0f44844534613f252a5ea75/apex/optimizers/fused_adam.py#L16.
+from torch.optim import SGD
+from torch.optim import AdamW as Adam
 
 from megatron.core import mpu
 from megatron.core.optimizer.cpu_offloading.hybrid_optimizer import HybridDeviceOptimizer
@@ -100,7 +112,7 @@ def _get_param_groups(
             if not param.requires_grad:
                 continue
 
-            is_expert_parallel = not getattr(param, 'allreduce', True)
+            is_expert_parallel = not getattr(param, "allreduce", True)
 
             if no_weight_decay_cond is not None:
                 no_wd = no_weight_decay_cond(name, param)
@@ -126,7 +138,7 @@ def _get_param_groups(
             # For input/embedding and output layer: embedding.word_embeddings.weight /
             # output_layer.weight.
             if use_decoupled_learning_rate and getattr(
-                param, 'is_embedding_or_output_parameter', False
+                param, "is_embedding_or_output_parameter", False
             ):
                 is_decoupled_lr = True
 
@@ -145,11 +157,11 @@ def _get_param_groups(
     for (wd_mult, _lr_mult, is_expert_parallel, is_decoupled_lr), params in params_map.items():
         assert len(params) > 0
         param_group = {
-            'params': params,
-            'wd_mult': wd_mult,
-            'lr_mult': _lr_mult,
-            'is_expert_parallel': is_expert_parallel,
-            'is_decoupled_lr': is_decoupled_lr,
+            "params": params,
+            "wd_mult": wd_mult,
+            "lr_mult": _lr_mult,
+            "is_expert_parallel": is_expert_parallel,
+            "is_decoupled_lr": is_decoupled_lr,
         }
         param_groups.append(param_group)
 
@@ -193,13 +205,13 @@ def _update_min_and_max_lr_in_param_groups(
         decoupled_min_lr = min_lr
 
     for param_group in param_groups:
-        if param_group['is_decoupled_lr']:
+        if param_group["is_decoupled_lr"]:
             assert decoupled_lr is not None
-            param_group['max_lr'] = decoupled_lr
-            param_group['min_lr'] = decoupled_min_lr
+            param_group["max_lr"] = decoupled_lr
+            param_group["min_lr"] = decoupled_min_lr
         else:
-            param_group['max_lr'] = lr
-            param_group['min_lr'] = min_lr
+            param_group["max_lr"] = lr
+            param_group["min_lr"] = min_lr
     return param_groups
 
 
@@ -288,16 +300,16 @@ def _get_megatron_optimizer_based_on_param_groups(
     # for the purposes of grad stats reductions
     if param_groups:
         if config.optimizer_cpu_offload:
-            if torch.__version__ < '2.3.0':
+            if torch.__version__ < "2.3.0":
                 warnings.warn(
                     "CPU offload is recommended for PyTorch >= 2.3.0, "
                     "untested versions below this may have convergence issues."
                 )
-            gpu_optimizer_cls = Adam if config.optimizer == 'adam' else SGD
-            cpu_optimizer_cls = CPUAdam if config.optimizer == 'adam' else CPUSGD
+            gpu_optimizer_cls = Adam if config.optimizer == "adam" else SGD
+            cpu_optimizer_cls = CPUAdam if config.optimizer == "adam" else CPUSGD
             if config.use_torch_optimizer_for_cpu_offload:
                 gpu_optimizer_cls = cpu_optimizer_cls
-            if config.optimizer == 'adam':
+            if config.optimizer == "adam":
                 gpu_optimizer_cls = Adam
                 cpu_optimizer_cls = CPUAdam
                 optimizer_defaults = dict(
@@ -326,7 +338,7 @@ def _get_megatron_optimizer_based_on_param_groups(
                 **optimizer_defaults,
             )
             init_state_fn = None
-        elif config.optimizer == 'adam':
+        elif config.optimizer == "adam":
             kwargs = {
                 "params": param_groups,
                 "lr": config.lr,
@@ -351,15 +363,15 @@ def _get_megatron_optimizer_based_on_param_groups(
 
             def init_state_fn(opt, config=None):
                 for group in opt.param_groups:
-                    for p in group['params']:
+                    for p in group["params"]:
                         if len(opt.state[p]) == 0:
                             if config is None or not config.use_precision_aware_optimizer:
-                                opt.state[p]['exp_avg'] = torch.zeros_like(p.data)
-                                opt.state[p]['exp_avg_sq'] = torch.zeros_like(p.data)
+                                opt.state[p]["exp_avg"] = torch.zeros_like(p.data)
+                                opt.state[p]["exp_avg_sq"] = torch.zeros_like(p.data)
                             else:
                                 opt.initialize_state(p)
 
-        elif config.optimizer == 'sgd':
+        elif config.optimizer == "sgd":
             optimizer = SGD(
                 param_groups,
                 lr=config.lr,
@@ -368,7 +380,7 @@ def _get_megatron_optimizer_based_on_param_groups(
             )
             init_state_fn = None
         else:
-            raise Exception('{} optimizer is not supported.'.format(config.optimizer))
+            raise Exception("{} optimizer is not supported.".format(config.optimizer))
     else:
         optimizer = None
         init_state_fn = None
@@ -378,7 +390,6 @@ def _get_megatron_optimizer_based_on_param_groups(
     #   from the MixedPrecisionOptimizer, which manages any optimizer where
     #   the model params and main params are distinct.
     if config.fp16 or config.bf16 or config.use_distributed_optimizer:
-
         # Grad scaler:
         #    if loss-scale is provided, instantiate the constant scaler.
         #    if we are using fp16 and loss-scale is not present, use a
@@ -419,16 +430,16 @@ def _get_megatron_optimizer_based_on_param_groups(
             # the duplicated weight gradients, need to reduce gradient stats inside each instance.
             setattr(
                 optimizer,
-                'grad_stats_parallel_group',
+                "grad_stats_parallel_group",
                 mpu.get_intra_distributed_optimizer_instance_group(),
             )
         else:
             optimizer = Float16OptimizerWithFloat16Params(*optimizer_args)
-            setattr(optimizer, 'grad_stats_parallel_group', model_parallel_group)
+            setattr(optimizer, "grad_stats_parallel_group", model_parallel_group)
     else:
         # FP32 optimizer.
         optimizer = FP32Optimizer(optimizer, config, init_state_fn)
-        setattr(optimizer, 'grad_stats_parallel_group', model_parallel_group)
+        setattr(optimizer, "grad_stats_parallel_group", model_parallel_group)
 
     return optimizer
 
@@ -461,7 +472,7 @@ def get_megatron_optimizer(
         Instance of MegatronOptimizer.
     """
 
-    log_single_rank(logger, logging.INFO, f'Setting up optimizer with config {config}')
+    log_single_rank(logger, logging.INFO, f"Setting up optimizer with config {config}")
 
     # Separate out first model chunk if overlapping param AG with optimizer step.
     if config.overlap_param_gather_with_optimizer_step:
@@ -498,7 +509,7 @@ def get_megatron_optimizer(
                 scale_lr_cond=scale_lr_cond,
                 lr_mult=lr_mult,
                 filter_fn=lambda g: True,
-                buffer_name='buffers',
+                buffer_name="buffers",
             )
             optimizers.append(
                 _get_megatron_optimizer_based_on_param_groups(
@@ -531,8 +542,8 @@ def get_megatron_optimizer(
             no_weight_decay_cond=no_weight_decay_cond,
             scale_lr_cond=scale_lr_cond,
             lr_mult=lr_mult,
-            filter_fn=lambda g: not g['is_expert_parallel'],
-            buffer_name='buffers',
+            filter_fn=lambda g: not g["is_expert_parallel"],
+            buffer_name="buffers",
         )
         for model_chunk in dense_model_chunks:
             model_chunk.overlap_param_gather_with_optimizer_step = (
@@ -570,8 +581,8 @@ def get_megatron_optimizer(
         no_weight_decay_cond=no_weight_decay_cond,
         scale_lr_cond=scale_lr_cond,
         lr_mult=lr_mult,
-        filter_fn=lambda g: g['is_expert_parallel'],
-        buffer_name='expert_parallel_buffers',
+        filter_fn=lambda g: g["is_expert_parallel"],
+        buffer_name="expert_parallel_buffers",
     )
     if len(moe_param_groups) > 0:
         model_parallel_rank = torch.distributed.get_rank(

@@ -1,4 +1,6 @@
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 from contextlib import nullcontext
 from dataclasses import dataclass
@@ -24,7 +26,11 @@ from megatron.core.transformer.transformer_layer import (
     get_transformer_layer_offset,
 )
 from megatron.core.transformer.utils import sharded_state_dict_default
-from megatron.core.utils import WrappedTensor, deprecate_inference_params, make_viewless_tensor
+from megatron.core.utils import (
+    WrappedTensor,
+    deprecate_inference_params,
+    make_viewless_tensor,
+)
 
 try:
     from megatron.core.extensions.transformer_engine import (
@@ -63,12 +69,13 @@ def get_num_layers_to_build(config: TransformerConfig) -> int:
         config.num_layers_in_first_pipeline_stage is not None
         or config.num_layers_in_last_pipeline_stage is not None
     ):
-
         assert not (
             config.account_for_embedding_in_pipeline_split
             or config.account_for_loss_in_pipeline_split
-        ), " \
+        ), (
+            " \
         Does not support standalone embedding stage and standalone loss stage with uneven pp"
+        )
         # Number of layers to distribute over rest of pipeline stages
         layers_to_distribute = config.num_layers
         # Number of pipeline stages left for distributing transformer layers
@@ -84,9 +91,9 @@ def get_num_layers_to_build(config: TransformerConfig) -> int:
             layers_to_distribute -= config.num_layers_in_last_pipeline_stage
             pipeline_stages_left -= 1
 
-        assert (
-            layers_to_distribute % pipeline_stages_left == 0
-        ), "With uneven pipelineing the left over layers must be divisible by left over stages"
+        assert layers_to_distribute % pipeline_stages_left == 0, (
+            "With uneven pipelineing the left over layers must be divisible by left over stages"
+        )
         num_layers_per_pipeline_rank = layers_to_distribute // pipeline_stages_left
 
         # If the uneven first (last) pipeline stage is enabled, return the specified number
@@ -112,9 +119,9 @@ def get_num_layers_to_build(config: TransformerConfig) -> int:
         if config.account_for_loss_in_pipeline_split:
             num_layers += 1
 
-        assert (
-            num_layers % config.pipeline_model_parallel_size == 0
-        ), "num_layers should be divisible by pipeline_model_parallel_size"
+        assert num_layers % config.pipeline_model_parallel_size == 0, (
+            "num_layers should be divisible by pipeline_model_parallel_size"
+        )
         num_layers_per_pipeline_rank = num_layers // config.pipeline_model_parallel_size
 
     if (
@@ -134,10 +141,10 @@ def get_num_layers_to_build(config: TransformerConfig) -> int:
         # Stage 1: [2, 3]  [6, 7]
         vp_size = parallel_state.get_virtual_pipeline_model_parallel_world_size()
 
-        assert (
-            num_layers_per_pipeline_rank % vp_size == 0
-        ), f"num_layers_per_pipeline_rank {num_layers_per_pipeline_rank} \
+        assert num_layers_per_pipeline_rank % vp_size == 0, (
+            f"num_layers_per_pipeline_rank {num_layers_per_pipeline_rank} \
             should be divisible by vp_size {vp_size}"
+        )
         num_layers_per_virtual_rank = num_layers_per_pipeline_rank // vp_size
 
         num_layers_to_build = num_layers_per_virtual_rank
@@ -247,7 +254,7 @@ class TransformerBlock(MegatronModule):
         self.input_tensor = None
 
         self.checkpoint_core_attention = (
-            self.config.recompute_granularity == 'selective'
+            self.config.recompute_granularity == "selective"
             and "core_attn" in self.config.recompute_modules
         )
 
@@ -265,11 +272,14 @@ class TransformerBlock(MegatronModule):
                 self.offload_context if self.config.cpu_offloading else None
             )
         else:
-            assert (
-                self.config.cpu_offloading is False
-            ), "CPU Offloading is enabled when TE is not present"
+            assert self.config.cpu_offloading is False, (
+                "CPU Offloading is enabled when TE is not present"
+            )
 
-            self.offload_context, self.group_prefetch_offload_commit_async = nullcontext(), None
+            self.offload_context, self.group_prefetch_offload_commit_async = (
+                nullcontext(),
+                None,
+            )
             self.config._cpu_offloading_context = None
 
         if model_comm_pgs is None:
@@ -386,7 +396,7 @@ class TransformerBlock(MegatronModule):
                     rotary_pos_emb,
                 )
 
-        if self.config.recompute_method == 'uniform':
+        if self.config.recompute_method == "uniform":
             # Uniformly divide the total number of Transformer layers and checkpoint
             # the input activation of each divided chunk.
             # A method to further reduce memory usage reducing checkpoints.
@@ -398,7 +408,7 @@ class TransformerBlock(MegatronModule):
 
                 layer_idx += self.config.recompute_num_layers
 
-        elif self.config.recompute_method == 'block':
+        elif self.config.recompute_method == "block":
             # Checkpoint the input activation of only a set number of individual
             # Transformer layers and skip the rest.
             # A method fully use the device memory removing redundant re-computation.
@@ -416,7 +426,11 @@ class TransformerBlock(MegatronModule):
                     hidden_states, context = checkpoint_handler(custom(layer_idx, layer_idx + 1))
                 else:
                     hidden_states, context = custom(layer_idx, layer_idx + 1)(
-                        hidden_states, attention_mask, context, context_mask, rotary_pos_emb
+                        hidden_states,
+                        attention_mask,
+                        context,
+                        context_mask,
+                        rotary_pos_emb,
                     )
         else:
             raise ValueError("Invalid activation recompute method.")
@@ -525,7 +539,7 @@ class TransformerBlock(MegatronModule):
 
         with rng_context, outer_fp8_context:
             # Forward pass.
-            if self.config.recompute_granularity == 'full' and self.training:
+            if self.config.recompute_granularity == "full" and self.training:
                 hidden_states = self._checkpointed_forward(
                     hidden_states=hidden_states,
                     attention_mask=attention_mask,
@@ -570,6 +584,8 @@ class TransformerBlock(MegatronModule):
             # TENorm produces a "viewed" tensor. This will result in schedule.py's
             # deallocate_output_tensor() throwing an error, so a viewless tensor is
             # created to prevent this.
+            if type(hidden_states) is tuple:
+                hidden_states = hidden_states[0]
             hidden_states = make_viewless_tensor(
                 inp=hidden_states, requires_grad=True, keep_graph=True
             )
@@ -577,7 +593,7 @@ class TransformerBlock(MegatronModule):
         return hidden_states
 
     def sharded_state_dict(
-        self, prefix: str = '', sharded_offsets: tuple = (), metadata: dict = None
+        self, prefix: str = "", sharded_offsets: tuple = (), metadata: dict = None
     ) -> ShardedStateDict:
         """
         Generate a sharded state dictionary for the transformer block.
@@ -594,7 +610,7 @@ class TransformerBlock(MegatronModule):
         """
         assert not sharded_offsets, "Unexpected sharded offsets"
         non_homogeneous_layers = metadata is not None and metadata.get(
-            'non_homogeneous_layers', False
+            "non_homogeneous_layers", False
         )
         if isinstance(self.config.moe_layer_freq, int):
             if self.config.moe_layer_freq > 1:
@@ -607,15 +623,15 @@ class TransformerBlock(MegatronModule):
 
         sharded_state_dict = {}
 
-        layer_prefix = f'{prefix}layers.'
+        layer_prefix = f"{prefix}layers."
         num_layers = self.config.num_layers
         for layer in self.layers:
             offset = get_transformer_layer_offset(self.config)
 
             global_layer_offset = layer.layer_number - 1  # self.layer_number starts at 1
-            state_dict_prefix = f'{layer_prefix}{global_layer_offset - offset}.'  # module list index in TransformerBlock # pylint: disable=line-too-long
+            state_dict_prefix = f"{layer_prefix}{global_layer_offset - offset}."  # module list index in TransformerBlock # pylint: disable=line-too-long
             if non_homogeneous_layers:
-                sharded_prefix = f'{layer_prefix}{global_layer_offset}.'
+                sharded_prefix = f"{layer_prefix}{global_layer_offset}."
                 sharded_pp_offset = []
             else:
                 sharded_prefix = layer_prefix
@@ -634,7 +650,7 @@ class TransformerBlock(MegatronModule):
             if not module is self.layers:
                 sharded_state_dict.update(
                     sharded_state_dict_default(
-                        module, f'{prefix}{name}.', sharded_offsets, metadata
+                        module, f"{prefix}{name}.", sharded_offsets, metadata
                     )
                 )
 

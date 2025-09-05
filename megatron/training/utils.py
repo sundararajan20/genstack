@@ -1,6 +1,9 @@
 # Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 """General utilities."""
+
 import json
 import os
 import sys
@@ -9,39 +12,45 @@ from datetime import datetime
 import torch
 
 try:
-    from transformer_engine.pytorch.optimizers import multi_tensor_applier, multi_tensor_l2norm
+    from transformer_engine.pytorch.optimizers import (
+        multi_tensor_applier,
+        multi_tensor_l2norm,
+    )
 except ImportError:
     try:
         from amp_C import multi_tensor_l2norm
         from apex.multi_tensor_apply import multi_tensor_applier
     except ImportError:
-
         import warnings
 
         warnings.warn(
-            f'Transformer Engine and Apex are not installed. '
-            'Falling back to local implementations of '
-            'multi_tensor_applier and multi_tensor_l2norm'
+            f"Transformer Engine and Apex are not installed. "
+            "Falling back to local implementations of "
+            "multi_tensor_applier and multi_tensor_l2norm"
         )
 
         from megatron.core.utils import (
-            local_multi_tensor_l2_norm as multi_tensor_l2norm,
             local_multi_tensor_applier as multi_tensor_applier,
         )
+        from megatron.core.utils import (
+            local_multi_tensor_l2_norm as multi_tensor_l2norm,
+        )
 
-from megatron.training import get_args, get_adlr_autoresume
 from megatron.core import DistributedDataParallel as DDP
-from megatron.core.distributed.custom_fsdp import FullyShardedDataParallel as custom_FSDP
 from megatron.core import mpu
 from megatron.core.datasets.utils import get_blend_from_list
+from megatron.core.distributed.custom_fsdp import (
+    FullyShardedDataParallel as custom_FSDP,
+)
 from megatron.core.tensor_parallel import param_is_not_tensor_parallel_duplicate
+from megatron.core.transformer.module import Float16Module
 from megatron.core.utils import (
     get_batch_on_this_cp_rank,
     get_data_parallel_group_if_dtensor,
     to_local_if_dtensor,
 )
-from megatron.core.transformer.module import Float16Module
 from megatron.legacy.model.module import param_is_not_shared
+from megatron.training import get_adlr_autoresume, get_args
 
 try:
     from megatron.core.distributed import TorchFullyShardedDataParallel as torch_FSDP
@@ -94,7 +103,7 @@ def calc_params_l2_norm(model, force_create_fp32_copy=False):
                 custom_fsdp_all_param_is_shared = True
                 if param.numel() == 0:
                     continue
-            if not getattr(param, 'allreduce', True):
+            if not getattr(param, "allreduce", True):
                 # TODO: Implement memory optimization for MoE parameters.
                 assert param_is_not_shared(param)
                 param = to_local_if_dtensor(param)
@@ -103,8 +112,8 @@ def calc_params_l2_norm(model, force_create_fp32_copy=False):
                 if param_is_not_shared(param):
                     param = to_local_if_dtensor(param)
                     if args.bf16:
-                        if not force_create_fp32_copy and hasattr(param, 'main_param'):
-                            if getattr(param, 'main_param_sharded', False):
+                        if not force_create_fp32_copy and hasattr(param, "main_param"):
+                            if getattr(param, "main_param_sharded", False):
                                 if param.main_param is not None:
                                     sharded_params_data.append(param.main_param)
                             else:
@@ -117,14 +126,17 @@ def calc_params_l2_norm(model, force_create_fp32_copy=False):
                         params_data.append(param.data)
 
     # Calculate norm.
-    dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device='cuda')
+    dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device="cuda")
     if len(params_data) > 0:
         norm, _ = multi_tensor_applier(
-            multi_tensor_l2norm, dummy_overflow_buf, [params_data], False  # no per-parameter norm.
+            multi_tensor_l2norm,
+            dummy_overflow_buf,
+            [params_data],
+            False,  # no per-parameter norm.
         )
         norm_2 = norm * norm
     else:
-        norm_2 = torch.zeros((1,), dtype=torch.float32, device='cuda')
+        norm_2 = torch.zeros((1,), dtype=torch.float32, device="cuda")
 
     if data_parallel_group is not None:
         torch.distributed.all_reduce(
@@ -135,7 +147,7 @@ def calc_params_l2_norm(model, force_create_fp32_copy=False):
     # accumulated across the DP group since the main parameters are sharded because
     # of distributed optimizer.
     if len(sharded_params_data) > 0:
-        dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device='cuda')
+        dummy_overflow_buf = torch.tensor([0], dtype=torch.int, device="cuda")
         sharded_norm, _ = multi_tensor_applier(
             multi_tensor_l2norm,
             dummy_overflow_buf,
@@ -145,13 +157,17 @@ def calc_params_l2_norm(model, force_create_fp32_copy=False):
         sharded_norm_2 = sharded_norm * sharded_norm
         # Sum over all DP groups.
         torch.distributed.all_reduce(
-            sharded_norm_2, op=torch.distributed.ReduceOp.SUM, group=mpu.get_data_parallel_group()
+            sharded_norm_2,
+            op=torch.distributed.ReduceOp.SUM,
+            group=mpu.get_data_parallel_group(),
         )
         norm_2 += sharded_norm_2
 
     if custom_fsdp_all_param_is_shared:
         torch.distributed.all_reduce(
-            norm_2, op=torch.distributed.ReduceOp.SUM, group=mpu.get_data_parallel_group()
+            norm_2,
+            op=torch.distributed.ReduceOp.SUM,
+            group=mpu.get_data_parallel_group(),
         )
 
     # Add norm contribution from expert layers in MoEs.
@@ -252,11 +268,11 @@ def logical_and_across_model_parallel_group(input: bool) -> bool:
 def report_memory(name):
     """Simple GPU memory report."""
     mega_bytes = 1024.0 * 1024.0
-    string = name + ' memory (MB)'
-    string += ' | allocated: {}'.format(torch.cuda.memory_allocated() / mega_bytes)
-    string += ' | max allocated: {}'.format(torch.cuda.max_memory_allocated() / mega_bytes)
-    string += ' | reserved: {}'.format(torch.cuda.memory_reserved() / mega_bytes)
-    string += ' | max reserved: {}'.format(torch.cuda.max_memory_reserved() / mega_bytes)
+    string = name + " memory (MB)"
+    string += " | allocated: {}".format(torch.cuda.memory_allocated() / mega_bytes)
+    string += " | max allocated: {}".format(torch.cuda.max_memory_allocated() / mega_bytes)
+    string += " | reserved: {}".format(torch.cuda.memory_reserved() / mega_bytes)
+    string += " | max reserved: {}".format(torch.cuda.max_memory_reserved() / mega_bytes)
     if mpu.get_data_parallel_rank() == 0:
         print("[Rank {}] {}".format(torch.distributed.get_rank(), string), flush=True)
 
@@ -265,18 +281,18 @@ def print_params_min_max_norm(optimizer, iteration):
     """Print min, max, and norm of all parameters."""
     index = 0
     rank = torch.distributed.get_rank()
-    string = 'iteration, rank, index, tensor-model-parallel, min, max, norm\n'
+    string = "iteration, rank, index, tensor-model-parallel, min, max, norm\n"
     optimizer_ = optimizer.optimizer
     for param_group in optimizer_.param_groups:
-        for param in param_group['params']:
+        for param in param_group["params"]:
             index += 1
             min_ = param.data.min()
             max_ = param.data.max()
             norm = torch.linalg.norm(param.data)
-            string += '{:7d}, {:4d}, {:4d}, {:2d}, '.format(
+            string += "{:7d}, {:4d}, {:4d}, {:2d}, ".format(
                 iteration, rank, index, int(param.tensor_model_parallel)
             )
-            string += '{:.6E}, {:.6E}, {:.6E}\n'.format(min_, max_, norm)
+            string += "{:.6E}, {:.6E}, {:.6E}\n".format(min_, max_, norm)
     print(string, flush=True)
 
 
@@ -330,7 +346,6 @@ def get_ltor_masks_and_position_ids(
     if reset_position_ids or reset_attention_mask:
         # Loop through the batches:
         for b in range(micro_batch_size):
-
             # Find indecies where EOD token is.
             eod_index = position_ids[b, data[b] == eod_token]
             # Detach indecies from positions if going to modify positions.
@@ -396,12 +411,11 @@ def append_to_progress_log(string, barrier=True):
     if barrier:
         torch.distributed.barrier()
     if torch.distributed.get_rank() == 0:
-        with open(progress_log_filename, 'a') as f:
-            job_id = os.getenv('SLURM_JOB_ID', '')
+        with open(progress_log_filename, "a") as f:
+            job_id = os.getenv("SLURM_JOB_ID", "")
             num_gpus = args.world_size
             f.write(
-                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\tJob ID: {job_id}\t"
-                f"# GPUs: {num_gpus}\t{string}\n"
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\tJob ID: {job_id}\t# GPUs: {num_gpus}\t{string}\n"
             )
 
 
@@ -421,14 +435,14 @@ def get_blend_and_blend_per_split(args):
     if use_data_path:
         if args.data_args_path is not None:
             assert args.data_path is None
-            with open(args.data_args_path, 'r') as f:
+            with open(args.data_args_path, "r") as f:
                 blend = get_blend_from_list(f.read().split())
         else:
             assert args.data_path is not None
             blend = get_blend_from_list(args.data_path)
     elif use_per_split_data_path:
         if args.per_split_data_args_path is not None:
-            with open(args.per_split_data_args_path, 'r') as f:
+            with open(args.per_split_data_args_path, "r") as f:
                 per_split_data_args = json.load(f)
                 # Each element in blend_per_split should be a list of files (and optional
                 # weights), so split string if needed.
@@ -454,7 +468,6 @@ def get_blend_and_blend_per_split(args):
 
 
 def get_batch_on_this_tp_rank(data_iterator):
-
     args = get_args()
 
     def _broadcast(item):
@@ -466,76 +479,72 @@ def get_batch_on_this_tp_rank(data_iterator):
             )
 
     if mpu.get_tensor_model_parallel_rank() == 0:
-
         if data_iterator is not None:
             data = next(data_iterator)
         else:
             data = None
 
         batch = {
-            'tokens': data["tokens"].cuda(non_blocking=True),
-            'labels': data["labels"].cuda(non_blocking=True),
-            'loss_mask': data["loss_mask"].cuda(non_blocking=True),
-            'attention_mask': (
-                None
-                if "attention_mask" not in data
-                else data["attention_mask"].cuda(non_blocking=True)
+            "tokens": data["tokens"].to("meta"),
+            "labels": data["labels"].to("meta"),
+            "loss_mask": data["loss_mask"].to("meta"),
+            "attention_mask": (
+                None if "attention_mask" not in data else data["attention_mask"].to("meta")
             ),
-            'position_ids': data["position_ids"].cuda(non_blocking=True),
+            "position_ids": data["position_ids"].to("meta"),
         }
 
         if args.pipeline_model_parallel_size == 1:
-            _broadcast(batch['tokens'])
-            _broadcast(batch['labels'])
-            _broadcast(batch['loss_mask'])
-            _broadcast(batch['attention_mask'])
-            _broadcast(batch['position_ids'])
+            _broadcast(batch["tokens"])
+            _broadcast(batch["labels"])
+            _broadcast(batch["loss_mask"])
+            _broadcast(batch["attention_mask"])
+            _broadcast(batch["position_ids"])
 
         elif mpu.is_pipeline_first_stage(ignore_virtual=False):
-            _broadcast(batch['tokens'])
-            _broadcast(batch['attention_mask'])
-            _broadcast(batch['position_ids'])
+            _broadcast(batch["tokens"])
+            _broadcast(batch["attention_mask"])
+            _broadcast(batch["position_ids"])
 
         elif mpu.is_pipeline_last_stage(ignore_virtual=False):
             # Multi-Token Prediction (MTP) layers need tokens and position_ids to calculate embedding.
             # Currently the Multi-Token Prediction (MTP) layers is fixed on the last stage, so we need
             # to broadcast tokens and position_ids to all of the tensor parallel ranks on the last stage.
             if args.mtp_num_layers is not None:
-                _broadcast(batch['tokens'])
-                _broadcast(batch['position_ids'])
-            _broadcast(batch['labels'])
-            _broadcast(batch['loss_mask'])
-            _broadcast(batch['attention_mask'])
+                _broadcast(batch["tokens"])
+                _broadcast(batch["position_ids"])
+            _broadcast(batch["labels"])
+            _broadcast(batch["loss_mask"])
+            _broadcast(batch["attention_mask"])
 
     else:
-
         tokens = torch.empty(
             (args.micro_batch_size, args.seq_length),
             dtype=torch.int64,
-            device=torch.cuda.current_device(),
+            device="meta",
         )
         labels = torch.empty(
             (args.micro_batch_size, args.seq_length),
             dtype=torch.int64,
-            device=torch.cuda.current_device(),
+            device="meta",
         )
         loss_mask = torch.empty(
             (args.micro_batch_size, args.seq_length),
             dtype=torch.float32,
-            device=torch.cuda.current_device(),
+            device="meta",
         )
         if args.create_attention_mask_in_dataloader:
             attention_mask = torch.empty(
                 (args.micro_batch_size, 1, args.seq_length, args.seq_length),
                 dtype=torch.bool,
-                device=torch.cuda.current_device(),
+                device="meta",
             )
         else:
             attention_mask = None
         position_ids = torch.empty(
             (args.micro_batch_size, args.seq_length),
             dtype=torch.int64,
-            device=torch.cuda.current_device(),
+            device="meta",
         )
 
         if args.pipeline_model_parallel_size == 1:
@@ -569,11 +578,11 @@ def get_batch_on_this_tp_rank(data_iterator):
             _broadcast(attention_mask)
 
         batch = {
-            'tokens': tokens,
-            'labels': labels,
-            'loss_mask': loss_mask,
-            'attention_mask': attention_mask,
-            'position_ids': position_ids,
+            "tokens": tokens,
+            "labels": labels,
+            "loss_mask": loss_mask,
+            "attention_mask": attention_mask,
+            "position_ids": position_ids,
         }
 
     return batch

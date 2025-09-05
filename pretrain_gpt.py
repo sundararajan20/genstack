@@ -1,4 +1,6 @@
 # Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 """Pretrain GPT."""
 
@@ -8,8 +10,14 @@ from typing import List, Optional, Tuple, Union
 import torch
 
 from megatron.core import parallel_state
-from megatron.core.datasets.blended_megatron_dataset_builder import BlendedMegatronDatasetBuilder
-from megatron.core.datasets.gpt_dataset import GPTDataset, GPTDatasetConfig, MockGPTDataset
+from megatron.core.datasets.blended_megatron_dataset_builder import (
+    BlendedMegatronDatasetBuilder,
+)
+from megatron.core.datasets.gpt_dataset import (
+    GPTDataset,
+    GPTDatasetConfig,
+    MockGPTDataset,
+)
 from megatron.core.enums import ModelType
 from megatron.core.models.gpt import GPTModel
 from megatron.core.models.gpt.gpt_layer_specs import (
@@ -24,7 +32,13 @@ from megatron.core.models.gpt.heterogeneous.heterogeneous_layer_specs import (
 from megatron.core.rerun_state_machine import get_rerun_state_machine
 from megatron.core.transformer.spec_utils import import_module
 from megatron.core.utils import StragglerDetector
-from megatron.training import get_args, get_timers, get_tokenizer, pretrain, print_rank_0
+from megatron.training import (
+    get_args,
+    get_timers,
+    get_tokenizer,
+    pretrain,
+    print_rank_0,
+)
 from megatron.training.arguments import core_transformer_config_from_args
 from megatron.training.utils import (
     get_batch_on_this_cp_rank,
@@ -38,9 +52,14 @@ import megatron.legacy.model  # isort: skip
 # NOTE: Loading `megatron.legacy.model` earlier fails due to circular import
 
 try:
-    from megatron.post_training.arguments import add_modelopt_args, modelopt_args_enabled
+    from megatron.post_training.arguments import (
+        add_modelopt_args,
+        modelopt_args_enabled,
+    )
     from megatron.post_training.loss_func import loss_func as loss_func_modelopt
-    from megatron.post_training.model_provider import model_provider as model_provider_modelopt
+    from megatron.post_training.model_provider import (
+        model_provider as model_provider_modelopt,
+    )
 
     has_nvidia_modelopt = True
 except ImportError:
@@ -70,6 +89,7 @@ def model_provider(
         return model_provider_modelopt(pre_process, post_process)
 
     use_te = args.transformer_impl == "transformer_engine"
+    print(f"use_te: {use_te}")
 
     if args.record_memory_history:
         torch.cuda.memory._record_memory_history(
@@ -82,18 +102,21 @@ def model_provider(
 
         def oom_observer(device, alloc, device_alloc, device_free):
             # snapshot right after an OOM happened
-            print('saving allocated state during OOM')
+            print("saving allocated state during OOM")
             snapshot = torch.cuda.memory._snapshot()
             from pickle import dump
 
             dump(
                 snapshot,
-                open(f"oom_rank-{torch.distributed.get_rank()}_{args.memory_snapshot_path}", 'wb'),
+                open(
+                    f"oom_rank-{torch.distributed.get_rank()}_{args.memory_snapshot_path}",
+                    "wb",
+                ),
             )
 
         torch._C._cuda_attach_out_of_memory_observer(oom_observer)
 
-    print_rank_0('building GPT model ...')
+    print_rank_0("building GPT model ...")
     # Experimental loading arguments from yaml
     if args.yaml_cfg is not None:
         config = core_transformer_config_from_yaml(args, "language_model")
@@ -115,7 +138,9 @@ def model_provider(
             if args.num_experts:
                 # Define the decoder block spec
                 transformer_layer_spec = get_gpt_decoder_block_spec(
-                    config, use_transformer_engine=use_te, normalization=args.normalization
+                    config,
+                    use_transformer_engine=use_te,
+                    normalization=args.normalization,
                 )
             elif args.heterogeneous_layers_config_path is not None:
                 transformer_layer_spec = get_gpt_heterogeneous_layer_spec(config, use_te)
@@ -187,7 +212,9 @@ SPIKY_LOSS_FACTOR = 10
 
 
 def loss_func(
-    loss_mask: torch.Tensor, output_tensor: torch.Tensor, model: Optional[GPTModel] = None
+    loss_mask: torch.Tensor,
+    output_tensor: torch.Tensor,
+    model: Optional[GPTModel] = None,
 ):
     """Loss function.
 
@@ -210,6 +237,7 @@ def loss_func(
     losses = output_tensor.float()
     loss_mask = loss_mask.view(-1).float()
     total_tokens = loss_mask.sum()
+
     loss = torch.cat([torch.sum(losses.view(-1) * loss_mask).view(1), total_tokens.view(1)])
 
     if args.context_parallel_size > 1:
@@ -253,7 +281,11 @@ def loss_func(
     # in core/pipeline_parallel/schedule.py::deallocate_output_tensor, calling .clone()
     # on loss[0] fixes this
     local_num_tokens = loss[1].clone().detach().to(torch.int)
-    return (loss[0].clone(), local_num_tokens, {'lm loss': (reporting_loss[0], reporting_loss[1])})
+    return (
+        loss[0].clone(),
+        local_num_tokens,
+        {"lm loss": (reporting_loss[0], reporting_loss[1])},
+    )
 
 
 def forward_step(data_iterator, model: GPTModel):
@@ -267,11 +299,11 @@ def forward_step(data_iterator, model: GPTModel):
     timers = get_timers()
 
     # Get the batch.
-    timers('batch-generator', log_level=2).start()
+    timers("batch-generator", log_level=2).start()
     global stimer
     with stimer(bdata=True):
         tokens, labels, loss_mask, attention_mask, position_ids = get_batch(data_iterator)
-    timers('batch-generator').stop()
+    timers("batch-generator").stop()
 
     with stimer:
         if args.use_legacy_models:
@@ -346,7 +378,6 @@ def train_valid_test_datasets_provider(train_val_test_num_samples):
 
 
 if __name__ == "__main__":
-
     # Temporary for transition to core datasets
     train_valid_test_datasets_provider.is_distributed = True
 
@@ -355,6 +386,6 @@ if __name__ == "__main__":
         model_provider,
         ModelType.encoder_or_decoder,
         forward_step,
-        args_defaults={'tokenizer_type': 'GPT2BPETokenizer'},
+        args_defaults={"tokenizer_type": "GPT2BPETokenizer"},
         extra_args_provider=add_modelopt_args if has_nvidia_modelopt else None,
     )

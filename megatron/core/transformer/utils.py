@@ -1,6 +1,9 @@
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 """Utilities for transformer layers."""
+
 from functools import lru_cache
 from operator import itemgetter
 from typing import Any, Dict, Iterable, Optional, Tuple, Union
@@ -29,7 +32,9 @@ def get_linear_layer(rows, columns, init_method, perform_initialization=True):
 @lru_cache(maxsize=32)
 def get_default_causal_mask(sq: int) -> torch.Tensor:
     """Return the causal upper triangular mask for softmax input."""
-    return torch.triu(torch.ones(sq, sq, device="cuda"), diagonal=1).bool()
+    return torch.triu(
+        torch.ones(sq, sq, device="cuda" if torch.cuda.is_available() else "meta"), diagonal=1
+    ).bool()
 
 
 # pylint: disable=missing-function-docstring
@@ -143,15 +148,15 @@ def make_sharded_object_for_checkpoint(
 
 
 def _get_extra_state_offsets(
-    sharded_offsets: Iterable[Tuple[int, int, int]]
+    sharded_offsets: Iterable[Tuple[int, int, int]],
 ) -> Tuple[Tuple[int, ...], Tuple[int, ...]]:
     """Turns ShardedTensor offsets into offsets suitable for ShardedObject."""
     if sharded_offsets:
         sharded_offsets = sorted(sharded_offsets, key=itemgetter(0))  # sort by axis
         axis, extra_state_offset, extra_state_shape = zip(*sharded_offsets)
-        assert list(axis) == list(
-            range(len(axis))
-        ), f'Expected contiguous axis for offsets: {sharded_offsets}'
+        assert list(axis) == list(range(len(axis))), (
+            f'Expected contiguous axis for offsets: {sharded_offsets}'
+        )
     else:
         extra_state_shape = (1,)
         extra_state_offset = (0,)

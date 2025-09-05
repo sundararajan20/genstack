@@ -1,4 +1,6 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 from collections import OrderedDict
 from typing import Dict, Literal, Optional
@@ -10,7 +12,9 @@ from megatron.core import tensor_parallel
 from megatron.core.config_logger import has_config_logger_enabled, log_config_to_disk
 from megatron.core.dist_checkpointing.mapping import ShardedStateDict
 from megatron.core.inference.contexts import BaseInferenceContext
-from megatron.core.models.common.embeddings.language_model_embedding import LanguageModelEmbedding
+from megatron.core.models.common.embeddings.language_model_embedding import (
+    LanguageModelEmbedding,
+)
 from megatron.core.models.common.embeddings.rotary_pos_embedding import (
     MultimodalRotaryEmbedding,
     RotaryEmbedding,
@@ -83,8 +87,8 @@ class GPTModel(LanguageModule):
         parallel_output: bool = True,
         share_embeddings_and_output_weights: bool = False,
         position_embedding_type: Literal[
-            'learned_absolute', 'rope', 'mrope', 'none'
-        ] = 'learned_absolute',
+            "learned_absolute", "rope", "mrope", "none"
+        ] = "learned_absolute",
         rotary_percent: float = 1.0,
         rotary_base: int = 10000,
         rope_scaling: bool = False,
@@ -107,7 +111,7 @@ class GPTModel(LanguageModule):
         self.parallel_output = parallel_output
         self.share_embeddings_and_output_weights = share_embeddings_and_output_weights
 
-        if hasattr(self.config, 'position_embedding_type'):
+        if hasattr(self.config, "position_embedding_type"):
             self.position_embedding_type = self.config.position_embedding_type
         else:
             self.position_embedding_type = position_embedding_type
@@ -120,7 +124,7 @@ class GPTModel(LanguageModule):
         self.max_position_embeddings = max_sequence_length
         self.rotary_percent = rotary_percent
 
-        if hasattr(self.config, 'rotary_base'):
+        if hasattr(self.config, "rotary_base"):
             self.rotary_base = self.config.rotary_base
         else:
             self.rotary_base = rotary_base
@@ -137,7 +141,7 @@ class GPTModel(LanguageModule):
                 scatter_to_sequence_parallel=scatter_embedding_sequence_parallel,
             )
 
-        if self.position_embedding_type == 'rope' and not self.config.multi_latent_attention:
+        if self.position_embedding_type == "rope" and not self.config.multi_latent_attention:
             self.rotary_pos_emb = RotaryEmbedding(
                 kv_channels=self.config.kv_channels,
                 rotary_percent=rotary_percent,
@@ -149,7 +153,7 @@ class GPTModel(LanguageModule):
                 use_cpu_initialization=self.config.use_cpu_initialization,
             )
 
-        elif self.position_embedding_type == 'mrope' and not self.config.multi_latent_attention:
+        elif self.position_embedding_type == "mrope" and not self.config.multi_latent_attention:
             self.rotary_pos_emb = MultimodalRotaryEmbedding(
                 kv_channels=self.config.kv_channels,
                 rotary_percent=rotary_percent,
@@ -158,9 +162,9 @@ class GPTModel(LanguageModule):
                 rotary_base=rotary_base,
             )
             self.mrope_section = self.config.mrope_section
-            assert (
-                self.mrope_section is not None
-            ), "mrope require mrope_section setting, but we got None from TransformerConfig"
+            assert self.mrope_section is not None, (
+                "mrope require mrope_section setting, but we got None from TransformerConfig"
+            )
 
         # Cache for RoPE tensors which do not change between iterations.
         self.rotary_pos_emb_cache = {}
@@ -178,7 +182,6 @@ class GPTModel(LanguageModule):
 
         # Output
         if self.post_process or self.mtp_process:
-
             if self.config.defer_embedding_wgrad_compute:
                 # The embedding activation buffer preserves a reference to the input activations
                 # of the final embedding projection layer GEMM. It will hold the activations for
@@ -193,6 +196,9 @@ class GPTModel(LanguageModule):
             else:
                 self.embedding_activation_buffer = None
                 self.grad_output_buffer = None
+
+            # XXX: Disable gradient accumulation fusion for output layer
+            config.gradient_accumulation_fusion = False
 
             self.output_layer = tensor_parallel.ColumnParallelLinear(
                 config.hidden_size,
@@ -213,7 +219,9 @@ class GPTModel(LanguageModule):
 
         if has_config_logger_enabled(self.config):
             log_config_to_disk(
-                self.config, self.state_dict(), prefix=f'{type(self).__name__}_init_ckpt'
+                self.config,
+                self.state_dict(),
+                prefix=f"{type(self).__name__}_init_ckpt",
             )
 
     def set_input_tensor(self, input_tensor: Tensor) -> None:
@@ -229,7 +237,7 @@ class GPTModel(LanguageModule):
         if not isinstance(input_tensor, list):
             input_tensor = [input_tensor]
 
-        assert len(input_tensor) == 1, 'input_tensor should only be length 1 for gpt/bert'
+        assert len(input_tensor) == 1, "input_tensor should only be length 1 for gpt/bert"
         self.decoder.set_input_tensor(input_tensor[0])
 
     def forward(
@@ -276,11 +284,11 @@ class GPTModel(LanguageModule):
         rotary_pos_emb = None
         rotary_pos_cos = None
         rotary_pos_sin = None
-        if self.position_embedding_type == 'rope' and not self.config.multi_latent_attention:
+        if self.position_embedding_type == "rope" and not self.config.multi_latent_attention:
             if not self.training and self.config.flash_decode and inference_context:
-                assert (
-                    inference_context.is_static_batching()
-                ), "GPTModel currently only supports static inference batching."
+                assert inference_context.is_static_batching(), (
+                    "GPTModel currently only supports static inference batching."
+                )
                 # Flash decoding uses precomputed cos and sin for RoPE
                 rotary_pos_cos, rotary_pos_sin = self.rotary_pos_emb_cache.setdefault(
                     inference_context.max_sequence_length,
@@ -288,14 +296,18 @@ class GPTModel(LanguageModule):
                 )
             else:
                 rotary_seq_len = self.rotary_pos_emb.get_rotary_seq_len(
-                    inference_context, self.decoder, decoder_input, self.config, packed_seq_params
+                    inference_context,
+                    self.decoder,
+                    decoder_input,
+                    self.config,
+                    packed_seq_params,
                 )
                 rotary_pos_emb = self.rotary_pos_emb(
                     rotary_seq_len,
                     packed_seq=packed_seq_params is not None
-                    and packed_seq_params.qkv_format == 'thd',
+                    and packed_seq_params.qkv_format == "thd",
                 )
-        elif self.position_embedding_type == 'mrope' and not self.config.multi_latent_attention:
+        elif self.position_embedding_type == "mrope" and not self.config.multi_latent_attention:
             if self.training or not self.config.flash_decode:
                 rotary_pos_emb = self.rotary_pos_emb(position_ids, self.mrope_section)
             else:
@@ -387,20 +399,22 @@ class GPTModel(LanguageModule):
         ):
             hidden_states = hidden_states[-1:, :, :]
         logits, _ = self.output_layer(
-            hidden_states, weight=output_weight, runtime_gather_output=runtime_gather_output
+            hidden_states,
+            weight=output_weight,
+            runtime_gather_output=runtime_gather_output,
         )
 
         if has_config_logger_enabled(self.config):
             payload = OrderedDict(
                 {
-                    'input_ids': input_ids,
-                    'position_ids': position_ids,
-                    'attention_mask': attention_mask,
-                    'decoder_input': decoder_input,
-                    'logits': logits,
+                    "input_ids": input_ids,
+                    "position_ids": position_ids,
+                    "attention_mask": attention_mask,
+                    "decoder_input": decoder_input,
+                    "logits": logits,
                 }
             )
-            log_config_to_disk(self.config, payload, prefix='input_and_logits')
+            log_config_to_disk(self.config, payload, prefix="input_and_logits")
 
         if labels is None:
             # [s b h] => [b s h]
@@ -423,16 +437,19 @@ class GPTModel(LanguageModule):
             # So there will be both embedding layer and output layer in the mtp process stage.
             # In this case, if share_embeddings_and_output_weights is True, the shared weights
             # will be stored in embedding layer, and output layer will not have any weight.
-            assert hasattr(
-                self, 'embedding'
-            ), f"embedding is needed in this pipeline stage, but it is not initialized."
+            assert hasattr(self, "embedding"), (
+                f"embedding is needed in this pipeline stage, but it is not initialized."
+            )
             return self.embedding.word_embeddings.weight
         elif self.post_process:
             return self.output_layer.weight
         return None
 
     def sharded_state_dict(
-        self, prefix: str = '', sharded_offsets: tuple = (), metadata: Optional[Dict] = None
+        self,
+        prefix: str = "",
+        sharded_offsets: tuple = (),
+        metadata: Optional[Dict] = None,
     ) -> ShardedStateDict:
         """Sharded state dict implementation for GPTModel backward-compatibility.
 
@@ -448,14 +465,14 @@ class GPTModel(LanguageModule):
             ShardedStateDict: sharded state dict for the GPTModel
         """
         sharded_state_dict = super().sharded_state_dict(prefix, sharded_offsets, metadata)
-        output_layer_extra_state_key = f'{prefix}output_layer._extra_state'
+        output_layer_extra_state_key = f"{prefix}output_layer._extra_state"
 
         # Old GPT checkpoints only stored the output layer weight key. So we remove the
         # _extra_state key but check that it doesn't contain any data anyway
         output_extra_state = sharded_state_dict.pop(output_layer_extra_state_key, None)
-        assert not (
-            output_extra_state and output_extra_state.data
-        ), f'Expected output layer extra state to be empty, got: {output_extra_state}'
+        assert not (output_extra_state and output_extra_state.data), (
+            f"Expected output layer extra state to be empty, got: {output_extra_state}"
+        )
 
         # Multi-Token Prediction (MTP) need both embedding layer and output layer in
         # mtp process stage.
@@ -466,7 +483,7 @@ class GPTModel(LanguageModule):
         # of output layer in the mtp process stage and tie it to the output layer in the post
         # processing stage.
         if self.mtp_process and not self.pre_process:
-            emb_weight_key = f'{prefix}embedding.word_embeddings.weight'
+            emb_weight_key = f"{prefix}embedding.word_embeddings.weight"
             emb_weight = self.embedding.word_embeddings.weight
             tie_word_embeddings_state_dict(sharded_state_dict, emb_weight, emb_weight_key)
         if self.mtp_process and not self.post_process:
@@ -474,7 +491,7 @@ class GPTModel(LanguageModule):
             # is False. Because if share_embeddings_and_output_weights is True, the shared weight
             # will be stored in embedding layer, and output layer will not have any weight.
             if not self.share_embeddings_and_output_weights:
-                output_layer_weight_key = f'{prefix}output_layer.weight'
+                output_layer_weight_key = f"{prefix}output_layer.weight"
                 output_layer_weight = self.output_layer.weight
                 tie_output_layer_state_dict(
                     sharded_state_dict, output_layer_weight, output_layer_weight_key

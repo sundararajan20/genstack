@@ -1,6 +1,9 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 """Utility functions used throughout Megatron core"""
+
 import array
 import functools
 import hashlib
@@ -23,6 +26,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import torch
 from packaging.version import Version as PkgVersion
+from torch.distributed.distributed_c10d import ProcessGroup
 
 from megatron.core import config
 from megatron.core.package_info import __version__ as mcore_version
@@ -97,7 +101,6 @@ def experimental_fn(introduced_with_version: str):
 
         @wraps(func)
         def wrapped_func(*args, **kwargs):
-
             if config.ENABLE_EXPERIMENTAL is not True:
                 raise ExperimentalNotEnabledError(f"Flag {config.ENABLE_EXPERIMENTAL} not enabled.")
 
@@ -152,7 +155,6 @@ def experimental_cls(introduced_with_version: str):
             )
 
         def wrapped_func(cls):
-
             def guard(super: super, attr: str):
                 """Pass-through to callee attribute if experimental flag is enabled.
 
@@ -231,7 +233,7 @@ def get_torch_version():
     def get_torch_version_str():
         import torch
 
-        if hasattr(torch, '__version__'):
+        if hasattr(torch, "__version__"):
             return str(torch.__version__)
         else:
             return version("torch")
@@ -248,7 +250,7 @@ def get_te_version():
     def get_te_version_str():
         import transformer_engine as te
 
-        if hasattr(te, '__version__'):
+        if hasattr(te, "__version__"):
             return str(te.__version__)
         else:
             return version("transformer-engine")
@@ -286,7 +288,7 @@ def get_fa_version():
     def get_fa_version_str():
         import flash_attn as fa
 
-        if hasattr(fa, '__version__'):
+        if hasattr(fa, "__version__"):
             return str(fa.__version__)
         else:
             return version("flash-attn")
@@ -320,8 +322,7 @@ def deprecate_inference_params(inference_context, inference_params):
     """Print warning for deprecated `inference_params`."""
     if inference_context is None and inference_params is not None:
         warnings.warn(
-            "`inference_params` renamed to `inference_context`, and will be "
-            "removed in `megatron-core` 0.13."
+            "`inference_params` renamed to `inference_context`, and will be removed in `megatron-core` 0.13."
         )
         return inference_params
     return inference_context
@@ -333,8 +334,7 @@ def get_tensor_model_parallel_group_if_none(tp_group, is_expert=False, check_ini
     if tp_group is None:
         if torch.distributed.is_initialized() and torch.distributed.get_rank() == 0:
             warnings.warn(
-                "Warning: tp_group is None, using default tp group. "
-                "Passing tp_group will be mandatory soon",
+                "Warning: tp_group is None, using default tp group. Passing tp_group will be mandatory soon",
                 DeprecationWarning,
                 stacklevel=2,
             )
@@ -379,20 +379,20 @@ def get_attr_wrapped_model(model, attr, allow_none=True, return_model_obj=False)
 
 def get_model_type(model):
     """Returns model_type attribute"""
-    return get_attr_wrapped_model(model, 'model_type')
+    return get_attr_wrapped_model(model, "model_type")
 
 
 def get_model_xattn(model):
     """Returns whether the model has the xattn_needed attribute"""
     try:
-        return get_attr_wrapped_model(model, 'xattn_needed')
+        return get_attr_wrapped_model(model, "xattn_needed")
     except RuntimeError:
         return False
 
 
 def get_model_config(model):
     """Returns the config attribute, allowed to return None"""
-    return get_attr_wrapped_model(model, 'config', allow_none=False)
+    return get_attr_wrapped_model(model, "config", allow_none=False)
 
 
 class GlobalMemoryBuffer:
@@ -413,7 +413,10 @@ class GlobalMemoryBuffer:
             or self.buffer[(name, dtype)].numel() < required_len
         ):
             self.buffer[(name, dtype)] = torch.empty(
-                required_len, dtype=dtype, device=torch.cuda.current_device(), requires_grad=False
+                required_len,
+                dtype=dtype,
+                device="meta",
+                requires_grad=False,
             )
 
         return self.buffer[(name, dtype)][0:required_len].view(*tensor_shape)
@@ -604,11 +607,12 @@ def check_param_hashes_across_dp_replicas(
         for param_name, param in model_chunk.named_parameters():
             param_hash = torch.frombuffer(
                 array.array(
-                    'B', hashlib.sha1(param.data.to("cpu").float().numpy(force=True)).digest()
+                    "B",
+                    hashlib.sha1(param.data.to("cpu").float().numpy(force=True)).digest(),
                 ),
                 dtype=torch.uint8,
             )
-            if getattr(param, 'allreduce', True):
+            if getattr(param, "allreduce", True):
                 non_expert_params.append((model_chunk_id, param_name, param))
                 local_non_expert_param_hashes.append(param_hash)
             else:
@@ -621,7 +625,10 @@ def check_param_hashes_across_dp_replicas(
     for params, local_param_hashes, all_gather_group in zip(
         [non_expert_params, expert_params],
         [local_non_expert_param_hashes, local_expert_param_hashes],
-        [parallel_state.get_data_parallel_group(), parallel_state.get_expert_data_parallel_group()],
+        [
+            parallel_state.get_data_parallel_group(),
+            parallel_state.get_expert_data_parallel_group(),
+        ],
     ):
         # Collect per-parameter hashes across all ranks in group.
         assert len(params) == len(local_param_hashes)
@@ -641,8 +648,7 @@ def check_param_hashes_across_dp_replicas(
                 if not torch.equal(local_param_hashes[i], all_param_hashes[0][i]):
                     rank = torch.distributed.get_rank()
                     logger.info(
-                        f"[Rank {rank}] Hash not matching for {param_name} in model chunk"
-                        f"{model_chunk_id}"
+                        f"[Rank {rank}] Hash not matching for {param_name} in model chunk{model_chunk_id}"
                     )
         if cross_check:
             # Make sure all ranks have the same hash.
@@ -683,7 +689,11 @@ def make_tp_sharded_tensor_for_checkpoint(
             # both FSDP2 and TP shards axis 0
             # default MCore uses tp-cp-ep-dp-pp
             # FSDP2 is compatibile with TP, CP
-            new_offsets[0] = (prepend_axis_num, tp_rank * dp_size + dp_rank, tp_size * dp_size)
+            new_offsets[0] = (
+                prepend_axis_num,
+                tp_rank * dp_size + dp_rank,
+                tp_size * dp_size,
+            )
         else:
             # FSDP2 shards axis 0 and TP shards some other axis
             new_offsets.append((prepend_axis_num, dp_rank, dp_size))
@@ -691,8 +701,8 @@ def make_tp_sharded_tensor_for_checkpoint(
     if replica_id is None:
         replica_id = (0, 0, dp_replica_id)
 
-    if hasattr(tensor, 'fully_shard_param_local_shard'):
-        assert len(replica_id) == 3, f'Expected replica_id format (PP, TP, DP), got: {replica_id}'
+    if hasattr(tensor, "fully_shard_param_local_shard"):
+        assert len(replica_id) == 3, f"Expected replica_id format (PP, TP, DP), got: {replica_id}"
         replica_id = (*replica_id[:2], 0)
 
         sh_ten = ShardedTensor.from_rank_offsets_flat(
@@ -710,7 +720,7 @@ def make_tp_sharded_tensor_for_checkpoint(
             prepend_axis_num=prepend_axis_num,
             **kwargs,
         )
-        setattr(sh_ten, 'is_data_parallel_fully_shard', True)
+        setattr(sh_ten, "is_data_parallel_fully_shard", True)
         return sh_ten
 
     return ShardedTensor.from_rank_offsets(
@@ -746,8 +756,8 @@ def make_sharded_tensor_for_checkpoint(tensor, key, prepend_offsets=(), replica_
     if replica_id is None:
         replica_id = (0, parallel_state.get_tensor_model_parallel_rank(), dp_replica_id)
 
-    if hasattr(tensor, 'fully_shard_param_local_shard'):
-        assert len(replica_id) == 3, f'Expected replica_id format (PP, TP, DP), got: {replica_id}'
+    if hasattr(tensor, "fully_shard_param_local_shard"):
+        assert len(replica_id) == 3, f"Expected replica_id format (PP, TP, DP), got: {replica_id}"
         replica_id = (*replica_id[:2], 0)
 
         sh_ten = ShardedTensor.from_rank_offsets_flat(
@@ -760,7 +770,7 @@ def make_sharded_tensor_for_checkpoint(tensor, key, prepend_offsets=(), replica_
             prepend_axis_num=prepend_axis_num,
             **kwargs,
         )
-        setattr(sh_ten, 'is_data_parallel_fully_shard', True)
+        setattr(sh_ten, "is_data_parallel_fully_shard", True)
         return sh_ten
 
     return ShardedTensor.from_rank_offsets(
@@ -821,7 +831,8 @@ def prepare_input_tensors_for_wgrad_compute(grad_output, all_gathered_input):
             grad_output.shape[0] * grad_output.shape[1], grad_output.shape[2]
         )
         all_gathered_input = all_gathered_input.view(
-            all_gathered_input.shape[0] * all_gathered_input.shape[1], all_gathered_input.shape[2]
+            all_gathered_input.shape[0] * all_gathered_input.shape[1],
+            all_gathered_input.shape[2],
         )
 
     return grad_output, all_gathered_input
@@ -841,9 +852,9 @@ def drain_embedding_wgrad_compute(config, embedding_activation_buffer, grad_outp
     fusion are enabled.
     """
 
-    assert len(embedding_activation_buffer) == len(
-        grad_output_buffer
-    ), "Length of activation and gradient buffers need to be equal!"
+    assert len(embedding_activation_buffer) == len(grad_output_buffer), (
+        "Length of activation and gradient buffers need to be equal!"
+    )
 
     import fused_weight_gradient_mlp_cuda
 
@@ -862,7 +873,10 @@ def drain_embedding_wgrad_compute(config, embedding_activation_buffer, grad_outp
     if config.sequence_parallel:
         all_gather_buffer = get_global_memory_buffer().get_tensor(dim_size, input.dtype, "mpu_0")
         handle = dist_all_gather_func(
-            all_gather_buffer, input, group=get_tensor_model_parallel_group(), async_op=False
+            all_gather_buffer,
+            input,
+            group=get_tensor_model_parallel_group(),
+            async_op=False,
         )
 
         all_gathered_input[0] = all_gather_buffer
@@ -873,7 +887,6 @@ def drain_embedding_wgrad_compute(config, embedding_activation_buffer, grad_outp
     input = None
 
     def wgrad_compute(all_gathered_input, grad_output, weight):
-
         grad_output, all_gathered_input = prepare_input_tensors_for_wgrad_compute(
             grad_output, all_gathered_input
         )
@@ -900,7 +913,10 @@ def drain_embedding_wgrad_compute(config, embedding_activation_buffer, grad_outp
             name = "mpu_" + str((i + 1) % 2)
             all_gather_buffer = get_global_memory_buffer().get_tensor(dim_size, input.dtype, name)
             handle = dist_all_gather_func(
-                all_gather_buffer, input, group=get_tensor_model_parallel_group(), async_op=True
+                all_gather_buffer,
+                input,
+                group=get_tensor_model_parallel_group(),
+                async_op=True,
             )
 
             all_gathered_input[(i + 1) % 2] = all_gather_buffer
@@ -933,9 +949,45 @@ def local_multi_tensor_l2_norm(chunk_size, noop_flag, tensor_lists, per_tensor, 
     Computes l2 norm for a list of contiguous tensors
     works as a drop-in replacement for amp_C.multi_tensor_l2norm
     """
-    l2 = [[(torch.norm(tensor)) for tensor in tensor_list] for tensor_list in tensor_lists]
-    l2_reduced = torch.norm(torch.tensor(l2))
-    l2_cuda = torch.tensor([float(l2_reduced)], dtype=torch.float, device='cuda')
+    l2 = []
+    count = 0
+    is_meta = False
+    # Check if any input tensor is meta
+    for tensor_list in tensor_lists:
+        for tensor in tensor_list:
+            if tensor is not None and tensor.is_meta:
+                is_meta = True
+                break
+        if is_meta:
+            break
+
+    # If meta tensors detected, return a dummy meta tensor for norm and the correct count
+    if is_meta:
+        for tensor_list in tensor_lists:
+            count += sum(1 for tensor in tensor_list if tensor is not None)
+        # Return a dummy meta tensor for the norm
+        # Return count as None because the original function returns (norm, None)
+        # and get_grad_norm_fp32 only uses the first element (norm).
+        return torch.tensor(0.0, device="meta"), None
+
+    # Original calculation for non-meta tensors
+    for tensor_list in tensor_lists:
+        for tensor in tensor_list:
+            if tensor is not None:
+                l2.append(torch.norm(tensor))
+                count += 1
+
+    if not l2:
+        # Return zero norm if the list is empty
+        return torch.tensor(0.0, device="cuda" if torch.cuda.is_available() else "cpu"), None
+
+    l2_reduced = torch.norm(torch.stack(l2))
+    l2_cuda = torch.tensor(
+        [float(l2_reduced)],
+        dtype=torch.float,
+        device="cuda" if torch.cuda.is_available() else "cpu",
+    )
+    # Return count as None to match original function's return signature (norm, None)
     return l2_cuda, None
 
 
@@ -1369,7 +1421,13 @@ class StragglerDetector:
             et_flops = apir_flops / self.amp  # Estimated TFLOPs, not tracing backward
 
             o_dt = self._min_max(
-                ptime, btime, float(temp), float(power), float(util), float(clock), et_flops
+                ptime,
+                btime,
+                float(temp),
+                float(power),
+                float(util),
+                float(clock),
+                et_flops,
             )
             if self.rank == 0 and o_dt is not None and o_dt.aflops is not None:
                 now = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]"
@@ -1400,7 +1458,7 @@ class StragglerDetector:
                     line = f"^^^^ Top    {self.mmcnt} Ranks with highest Etpt(TF):"
                     shift = self.world - self.mmcnt
                     for i in range(self.mmcnt):
-                        line += f" {o_dt.aflops[i+shift]},"
+                        line += f" {o_dt.aflops[i + shift]},"
                     logger.info(line)
                 ret = True
 
@@ -1738,7 +1796,7 @@ def get_batch_on_this_cp_rank(batch: Dict[str, Any]):
         cp_rank = parallel_state.get_context_parallel_rank()
         for key, val in batch.items():
             if val is not None:
-                seq_dim = 1 if key != 'attention_mask' else 2
+                seq_dim = 1 if key != "attention_mask" else 2
                 val = val.view(
                     *val.shape[0:seq_dim],
                     2 * cp_size,
@@ -1746,7 +1804,9 @@ def get_batch_on_this_cp_rank(batch: Dict[str, Any]):
                     *val.shape[(seq_dim + 1) :],
                 )
                 index = torch.tensor(
-                    [cp_rank, (2 * cp_size - cp_rank - 1)], device="cpu", pin_memory=True
+                    [cp_rank, (2 * cp_size - cp_rank - 1)],
+                    device="cpu",
+                    pin_memory=True,
                 ).cuda(non_blocking=True)
                 val = val.index_select(seq_dim, index)
                 val = val.view(*val.shape[0:seq_dim], -1, *val.shape[(seq_dim + 2) :])

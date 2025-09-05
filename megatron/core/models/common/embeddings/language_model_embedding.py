@@ -1,4 +1,6 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 from typing import Literal, Optional
 
@@ -31,7 +33,7 @@ class LanguageModelEmbedding(MegatronModule):
         config: TransformerConfig,
         vocab_size: int,
         max_sequence_length: int,
-        position_embedding_type: Literal['learned_absolute', 'rope', 'none'] = 'learned_absolute',
+        position_embedding_type: Literal["learned_absolute", "rope", "none"] = "learned_absolute",
         num_tokentypes: int = 0,
         scatter_to_sequence_parallel: bool = True,
         tp_group: Optional[torch.distributed.ProcessGroup] = None,
@@ -41,7 +43,7 @@ class LanguageModelEmbedding(MegatronModule):
         self.config: TransformerConfig = config
         self.vocab_size: int = vocab_size
         self.max_sequence_length: int = max_sequence_length
-        self.add_position_embedding: bool = position_embedding_type == 'learned_absolute'
+        self.add_position_embedding: bool = position_embedding_type == "learned_absolute"
         self.num_tokentypes = num_tokentypes
         self.scatter_to_sequence_parallel = scatter_to_sequence_parallel
         self.tp_group = get_tensor_model_parallel_group_if_none(tp_group)
@@ -71,6 +73,9 @@ class LanguageModelEmbedding(MegatronModule):
             # Initialize the position embeddings.
             if self.config.perform_initialization:
                 self.config.init_method(self.position_embeddings.weight)
+            # If using meta tensors (implied by cpu init), move to meta device
+            if self.config.use_cpu_initialization:
+                self.position_embeddings = self.position_embeddings.to("meta")
 
         if self.num_tokentypes > 0:
             self.tokentype_embeddings = torch.nn.Embedding(

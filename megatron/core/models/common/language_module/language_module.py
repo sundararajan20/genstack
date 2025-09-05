@@ -1,4 +1,7 @@
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
+
 import logging
 import os
 from typing import Optional, Tuple
@@ -42,9 +45,9 @@ class LanguageModule(MegatronModule):
             env_variable_name: str, expected_value: int, attn_type: AttnBackend
         ) -> None:
             current_value = os.getenv(env_variable_name)
-            assert current_value is None or current_value == str(
-                expected_value
-            ), f'{env_variable_name} set to {current_value}, but expected {expected_value} for attention backend type {attn_type.name}. unset NVTE_FLASH_ATTN, NVTE_FUSED_ATTN and NVTE_UNFUSED_ATTN. Use the --attention-backend argument if you want to choose between (flash/fused/unfused/auto/local). Default is auto.'
+            assert current_value is None or current_value == str(expected_value), (
+                f"{env_variable_name} set to {current_value}, but expected {expected_value} for attention backend type {attn_type.name}. unset NVTE_FLASH_ATTN, NVTE_FUSED_ATTN and NVTE_UNFUSED_ATTN. Use the --attention-backend argument if you want to choose between (flash/fused/unfused/auto/local). Default is auto."
+            )
             os.environ[env_variable_name] = str(expected_value)
 
         if self.config.attention_backend == AttnBackend.local:
@@ -81,7 +84,7 @@ class LanguageModule(MegatronModule):
         # [b s] => [s b]
         labels = labels.transpose(0, 1).contiguous()
         if self.config.cross_entropy_loss_fusion:
-            if self.config.cross_entropy_fusion_impl == 'te':
+            if self.config.cross_entropy_fusion_impl == "te":
                 if te_parallel_cross_entropy is not None:
                     labels = torch.as_strided(labels, labels.size(), (labels.size()[1], 1))
                     loss = te_parallel_cross_entropy(
@@ -89,7 +92,7 @@ class LanguageModule(MegatronModule):
                     )
                 else:
                     raise RuntimeError("Trying to use a TE block when it's not present.")
-            elif self.config.cross_entropy_fusion_impl == 'native':
+            elif self.config.cross_entropy_fusion_impl == "native":
                 loss = fused_vocab_parallel_cross_entropy(
                     logits, labels, parallel_state.get_tensor_model_parallel_group()
                 )
@@ -120,7 +123,7 @@ class LanguageModule(MegatronModule):
         # So we need to copy embedding weights from pre processing stage as initial parameters
         # in these cases.
         if not self.share_embeddings_and_output_weights and not getattr(
-            self.config, 'mtp_num_layers', 0
+            self.config, "mtp_num_layers", 0
         ):
             return
 
@@ -138,7 +141,7 @@ class LanguageModule(MegatronModule):
         ):
             self.shared_embedding_or_output_weight().shared_embedding = True
 
-        if (self.post_process or getattr(self, 'mtp_process', False)) and not self.pre_process:
+        if (self.post_process or getattr(self, "mtp_process", False)) and not self.pre_process:
             assert not parallel_state.is_pipeline_first_stage(ignore_virtual=False)
             # set weights of the duplicated embedding to 0 here,
             # then copy weights from pre processing stage using all_reduce below.
@@ -165,7 +168,7 @@ class LanguageModule(MegatronModule):
         if torch.distributed.is_initialized():
             if parallel_state.is_rank_in_embedding_group(ignore_virtual=False):
                 weight = self.shared_embedding_or_output_weight()
-                weight.data = weight.data.cuda()
+                weight.data = weight.data.to("meta")
                 torch.distributed.all_reduce(
                     weight.data, group=parallel_state.get_embedding_group()
                 )
@@ -194,7 +197,7 @@ class LanguageModule(MegatronModule):
 
     def sharded_state_dict(
         self,
-        prefix: str = '',
+        prefix: str = "",
         sharded_offsets: Tuple[Tuple[int, int, int]] = (),
         metadata: Optional[dict] = None,
     ) -> ShardedStateDict:
@@ -211,9 +214,9 @@ class LanguageModule(MegatronModule):
         assert not sharded_offsets, "Unexpected sharded offsets"
         sharded_state_dict = super().sharded_state_dict(prefix, sharded_offsets, metadata)
 
-        first_stage_word_emb_key = f'{prefix}embedding.word_embeddings.weight'
-        output_layer_weight_key = f'{prefix}output_layer.weight'
-        output_layer_bias_key = f'{prefix}output_layer.bias'
+        first_stage_word_emb_key = f"{prefix}embedding.word_embeddings.weight"
+        output_layer_weight_key = f"{prefix}output_layer.weight"
+        output_layer_bias_key = f"{prefix}output_layer.bias"
 
         if self.share_embeddings_and_output_weights:
             self.tie_embeddings_and_output_weights_state_dict(
@@ -259,7 +262,7 @@ class LanguageModule(MegatronModule):
         # layer in mtp process stage. In this case, if share_embeddings_and_output_weights is True,
         # the shared weights will be stored in embedding layer, and output layer will not have
         # any weight.
-        if getattr(self, 'mtp_process', False):
+        if getattr(self, "mtp_process", False):
             # No output layer
             assert output_layer_weight_key not in sharded_state_dict, sharded_state_dict.keys()
             return

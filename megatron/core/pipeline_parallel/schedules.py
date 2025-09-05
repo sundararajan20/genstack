@@ -1,4 +1,6 @@
 # Copyright (c) 2022, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 import contextlib
 from typing import Callable, Iterator, List, Optional, Union
@@ -120,12 +122,12 @@ def get_forward_backward_func():
 
 
 def deallocate_output_tensor(out, deallocate_pipeline_outputs=False):
-    '''Pseudo-deallocate (i.e., set to scalar) the output tensor's '.data' field.
+    """Pseudo-deallocate (i.e., set to scalar) the output tensor's '.data' field.
 
     This method should be called right after the output tensor has been
     sent to the next pipeline stage. At this point, the output tensor is
     only useful for its '.grad_fn' field, and not its '.data'.
-    '''
+    """
     if (out is None) or (not deallocate_pipeline_outputs):
         return
     assert isinstance(out, torch.Tensor), "expected Tensor, found %s." % type(out).__name__
@@ -134,13 +136,13 @@ def deallocate_output_tensor(out, deallocate_pipeline_outputs=False):
 
 
 def custom_backward(output, grad_output):
-    '''Directly call C++ autograd engine.
+    """Directly call C++ autograd engine.
 
     To make the 'deallocate_output_tensor' (above) optimization work, the C++
     autograd engine must be called directly, bypassing Pytorch's
     torch.autograd.backward. Pytorch's 'backward' checks that the output and
     grad have the same shape, while C++'s 'backward' does not.
-    '''
+    """
 
     assert output.numel() == 1, "output should be pseudo-'freed' in schedule, to optimize memory"
     assert isinstance(output, torch.Tensor), "output == '%s'." % type(output).__name__
@@ -259,9 +261,9 @@ def forward_step(
         Tensor: The number of tokens.
     """
     if config.timers is not None:
-        config.timers('forward-compute', log_level=2).start()
+        config.timers("forward-compute", log_level=2).start()
 
-    if is_first_microbatch and hasattr(model, 'set_is_first_microbatch'):
+    if is_first_microbatch and hasattr(model, "set_is_first_microbatch"):
         model.set_is_first_microbatch()
     if current_microbatch is not None:
         set_current_microbatch(model, current_microbatch)
@@ -308,12 +310,12 @@ def forward_step(
             forward_data_store.append(data)
 
     if config.timers is not None:
-        config.timers('forward-compute').stop()
+        config.timers("forward-compute").stop()
 
     # Set the loss scale for the auxiliary loss of the MoE layer.
     # Since we use a trick to do backward on the auxiliary loss, we need to set the scale
     # explicitly.
-    if hasattr(config, 'num_moe_experts') and config.num_moe_experts is not None:
+    if hasattr(config, "num_moe_experts") and config.num_moe_experts is not None:
         # Calculate the loss scale based on the grad_scale_func if available, else default to 1.
         loss_scale = (
             config.grad_scale_func(torch.ones(1, device=output_tensor.device))
@@ -327,7 +329,7 @@ def forward_step(
             MoEAuxLossAutoScaler.set_loss_scale(loss_scale / num_microbatches)
 
     # Set the loss scale for Multi-Token Prediction (MTP) loss.
-    if hasattr(config, 'mtp_num_layers') and config.mtp_num_layers is not None:
+    if hasattr(config, "mtp_num_layers") and config.mtp_num_layers is not None:
         # Calculate the loss scale based on the grad_scale_func if available, else default to 1.
         loss_scale = (
             config.grad_scale_func(torch.ones(1, device=output_tensor.device))
@@ -369,7 +371,7 @@ def backward_step(input_tensor, output_tensor, output_tensor_grad, model_type, c
     # connections.
 
     if config.timers is not None:
-        config.timers('backward-compute', log_level=2).start()
+        config.timers("backward-compute", log_level=2).start()
 
     # Retain the grad on the input_tensor.
     unwrap_input_tensor_grad = False
@@ -424,7 +426,7 @@ def backward_step(input_tensor, output_tensor, output_tensor_grad, model_type, c
         input_tensor_grad = input_tensor_grad[0]
 
     if config.timers is not None:
-        config.timers('backward-compute').stop()
+        config.timers("backward-compute").stop()
 
     return input_tensor_grad
 
@@ -464,17 +466,17 @@ def forward_backward_no_pipelining(
         assert len(model) == 1, "non-pipeline-parallel schedule does not support model chunking"
         model = model[0]
     if isinstance(data_iterator, list):
-        assert (
-            len(data_iterator) == 1
-        ), "non-pipeline-parallel schedule does not support model chunking"
+        assert len(data_iterator) == 1, (
+            "non-pipeline-parallel schedule does not support model chunking"
+        )
         data_iterator = data_iterator[0]
-    assert (
-        adjust_tensor_shapes_fn is None
-    ), "adjust_tensor_shapes_fn is not supported for non-pipeline-parallel schedule"
+    assert adjust_tensor_shapes_fn is None, (
+        "adjust_tensor_shapes_fn is not supported for non-pipeline-parallel schedule"
+    )
 
     config = get_model_config(model)
     if config.timers is not None:
-        config.timers('forward-backward', log_level=1).start(barrier=config.barrier_with_L1_time)
+        config.timers("forward-backward", log_level=1).start(barrier=config.barrier_with_L1_time)
 
     no_sync_func = config.no_sync_func
     if no_sync_func is None:
@@ -484,7 +486,7 @@ def forward_backward_no_pipelining(
 
     forward_data_store = []
     input_tensor, output_tensor_grad = None, None
-    total_num_tokens = torch.zeros([], dtype=torch.int, device="cuda")
+    total_num_tokens = torch.zeros([], dtype=torch.int, device="meta")
     with no_sync_func():
         for i in range(num_microbatches - 1):
             output_tensor, num_tokens = forward_step(
@@ -532,9 +534,9 @@ def forward_backward_no_pipelining(
         )
 
     if config.timers is not None:
-        config.timers('forward-backward').stop()
+        config.timers("forward-backward").stop()
 
-    if hasattr(config, 'enable_cuda_graph') and config.enable_cuda_graph:
+    if hasattr(config, "enable_cuda_graph") and config.enable_cuda_graph:
         create_cudagraphs()
 
     return forward_data_store
@@ -549,10 +551,10 @@ def clear_embedding_activation_buffer(config, model):
     ):
         if isinstance(model, list):
             embedding_module = get_attr_wrapped_model(
-                model[-1], 'post_process', return_model_obj=True
+                model[-1], "post_process", return_model_obj=True
             )
         else:
-            embedding_module = get_attr_wrapped_model(model, 'post_process', return_model_obj=True)
+            embedding_module = get_attr_wrapped_model(model, "post_process", return_model_obj=True)
 
         # Need to ensure no stray activations exists in this buffer
         embedding_module.embedding_activation_buffer.clear()
@@ -582,7 +584,10 @@ def finish_embedding_wgrad_compute(config, embedding_module):
 
 
 def get_pp_rank_microbatches(
-    num_microbatches, num_model_chunks, microbatch_group_size_per_vp_stage, forward_only=False
+    num_microbatches,
+    num_model_chunks,
+    microbatch_group_size_per_vp_stage,
+    forward_only=False,
 ):
     """Get the number of total, warmup, and remaining microbatches in PP scheduling."""
     pipeline_parallel_size = parallel_state.get_pipeline_model_parallel_world_size()
@@ -709,12 +714,12 @@ def forward_backward_pipelining_with_interleaving(
 
     assert isinstance(model, list), "interleaved pipeline parallelism expected model chunking"
     assert all(isinstance(chunk, torch.nn.Module) for chunk in model), "invalid model chunking"
-    assert isinstance(
-        data_iterator, list
-    ), "interleaved pipeline parallelism expected each model chunk to have a data iterator"
-    assert (
-        adjust_tensor_shapes_fn is None
-    ), "adjust_tensor_shapes_fn is not supported for interleaved pipeline parallelism"
+    assert isinstance(data_iterator, list), (
+        "interleaved pipeline parallelism expected each model chunk to have a data iterator"
+    )
+    assert adjust_tensor_shapes_fn is None, (
+        "adjust_tensor_shapes_fn is not supported for interleaved pipeline parallelism"
+    )
 
     config = get_model_config(model[0])
     if config.overlap_p2p_comm and config.batch_p2p_comm:
@@ -725,7 +730,7 @@ def forward_backward_pipelining_with_interleaving(
         embedding_module = clear_embedding_activation_buffer(config, model)
 
     if config.timers is not None:
-        config.timers('forward-backward', log_level=1).start(barrier=config.barrier_with_L1_time)
+        config.timers("forward-backward", log_level=1).start(barrier=config.barrier_with_L1_time)
 
     # Disable async grad reductions
     no_sync_func = config.no_sync_func
@@ -793,8 +798,8 @@ def forward_backward_pipelining_with_interleaving(
         or config.microbatch_group_size_per_vp_stage < pipeline_parallel_size
     ):
         msg = (
-            'The number of contiguous micro-batches in a virtual pipeline stage'
-            f'should range in [PP={pipeline_parallel_size} , M={num_microbatches}]'
+            "The number of contiguous micro-batches in a virtual pipeline stage"
+            f"should range in [PP={pipeline_parallel_size} , M={num_microbatches}]"
         )
         raise ValueError(msg)
 
@@ -802,21 +807,21 @@ def forward_backward_pipelining_with_interleaving(
     # the pipeline will have dependency bubbles.
     final_microbatch_group_size = num_microbatches % config.microbatch_group_size_per_vp_stage
     if 0 < final_microbatch_group_size < pipeline_parallel_size:
-        msg = 'The remainder of M (the total micro-batches) divided by N (number of '
-        msg += 'contiguous micro-batches in a virtual pipeline stage) should be 0, '
-        msg += 'or larger than or equal to the pipeline-parallel size, but it is '
-        msg += f'{final_microbatch_group_size}. '
-        msg += 'Otherwise, it introduces dependency bubbles in the pipeline '
-        msg += 'and reduces throughput.'
+        msg = "The remainder of M (the total micro-batches) divided by N (number of "
+        msg += "contiguous micro-batches in a virtual pipeline stage) should be 0, "
+        msg += "or larger than or equal to the pipeline-parallel size, but it is "
+        msg += f"{final_microbatch_group_size}. "
+        msg += "Otherwise, it introduces dependency bubbles in the pipeline "
+        msg += "and reduces throughput."
         raise RuntimeError(msg)
 
     model_type = get_model_type(model[0])
 
     if model_type == ModelType.encoder_and_decoder:
         xattn_needed = get_model_xattn(model)
-        assert (
-            not xattn_needed
-        ), "Interleaving is not supported when xattn is required between encoder and decoder"
+        assert not xattn_needed, (
+            "Interleaving is not supported when xattn is required between encoder and decoder"
+        )
         tensor_shape = get_tensor_shapes(
             rank=parallel_state.get_pipeline_model_parallel_rank(),
             model_type=model_type,
@@ -843,7 +848,10 @@ def forward_backward_pipelining_with_interleaving(
         num_warmup_microbatches,
         num_microbatches_remaining,
     ) = get_pp_rank_microbatches(
-        num_microbatches, num_model_chunks, config.microbatch_group_size_per_vp_stage, forward_only
+        num_microbatches,
+        num_model_chunks,
+        config.microbatch_group_size_per_vp_stage,
+        forward_only,
     )
 
     # Checkpoint the activations of partial Transformer layers in a number of micro-batches
@@ -1126,8 +1134,7 @@ def forward_backward_pipelining_with_interleaving(
         if config.overlap_p2p_comm_warmup_flush:
             if not parallel_state.is_pipeline_first_stage(ignore_virtual=False) and k != 0:
                 assert recv_prev_wait_handles, (
-                    f'pp rank {pipeline_parallel_rank}, iteration {k},'
-                    'should have registered recv handle'
+                    f"pp rank {pipeline_parallel_rank}, iteration {k},should have registered recv handle"
                 )
                 recv_prev_wait_handle = recv_prev_wait_handles.pop(0)
                 recv_prev_wait_handle.wait()
@@ -1198,7 +1205,10 @@ def forward_backward_pipelining_with_interleaving(
                 output_tensor_grads[num_model_chunks - 1].append(output_tensor_grad)
             else:
                 input_tensor = p2p_communication.send_forward_recv_forward(
-                    output_tensor, recv_prev=recv_prev, tensor_shape=tensor_shape, config=config
+                    output_tensor,
+                    recv_prev=recv_prev,
+                    tensor_shape=tensor_shape,
+                    config=config,
                 )
             if recv_prev:
                 input_tensors[next_forward_model_chunk_id].append(input_tensor)
@@ -1294,8 +1304,8 @@ def forward_backward_pipelining_with_interleaving(
             if not parallel_state.is_pipeline_first_stage(ignore_virtual=False):
                 if config.overlap_p2p_comm_warmup_flush:
                     assert recv_prev_wait_handles, (
-                        f'pp rank {pipeline_parallel_rank}, fwd iteration {forward_k}, '
-                        'should have registered recv handle'
+                        f"pp rank {pipeline_parallel_rank}, fwd iteration {forward_k}, "
+                        "should have registered recv handle"
                     )
                     recv_prev_wait_handle = recv_prev_wait_handles.pop(0)
                     recv_prev_wait_handle.wait()
@@ -1356,8 +1366,8 @@ def forward_backward_pipelining_with_interleaving(
             if not parallel_state.is_pipeline_last_stage(ignore_virtual=False):
                 if config.overlap_p2p_comm_warmup_flush:
                     assert recv_next_wait_handles, (
-                        f'pp rank {pipeline_parallel_rank}, bwd iteration {backward_k}, '
-                        'should have registered recv next handle'
+                        f"pp rank {pipeline_parallel_rank}, bwd iteration {backward_k}, "
+                        "should have registered recv next handle"
                     )
                     recv_next_wait_handle = recv_next_wait_handles.pop(0)
                     recv_next_wait_handle.wait()
@@ -1481,8 +1491,8 @@ def forward_backward_pipelining_with_interleaving(
             if not parallel_state.is_pipeline_last_stage(ignore_virtual=False) and k != 0:
                 if config.overlap_p2p_comm_warmup_flush:
                     assert recv_next_wait_handles, (
-                        f'pp rank {pipeline_parallel_rank}, backward iteration {k}, '
-                        'should have registered recv next handle'
+                        f"pp rank {pipeline_parallel_rank}, backward iteration {k}, "
+                        "should have registered recv next handle"
                     )
                     recv_next_wait_handle = recv_next_wait_handles.pop(0)
                     recv_next_wait_handle.wait()
@@ -1559,7 +1569,10 @@ def forward_backward_pipelining_with_interleaving(
 
             else:
                 output_tensor_grad = p2p_communication.send_backward_recv_backward(
-                    input_tensor_grad, recv_next=recv_next, tensor_shape=tensor_shape, config=config
+                    input_tensor_grad,
+                    recv_next=recv_next,
+                    tensor_shape=tensor_shape,
+                    config=config,
                 )
 
                 if recv_next:
@@ -1576,15 +1589,14 @@ def forward_backward_pipelining_with_interleaving(
                     config.grad_sync_func[model_chunk_id](model[model_chunk_id].parameters())
                     synchronized_model_chunks.add(model_chunk_id)
 
-    assert (
-        not recv_prev_wait_handles
-    ), 'recv_prev_wait_handles should be cleared at the end of a step'
-    assert (
-        not recv_next_wait_handles
-    ), 'recv_next_wait_handles should be cleared at the end of a step'
+    assert not recv_prev_wait_handles, (
+        "recv_prev_wait_handles should be cleared at the end of a step"
+    )
+    assert not recv_next_wait_handles, (
+        "recv_next_wait_handles should be cleared at the end of a step"
+    )
 
     if config.finalize_model_grads_func is not None and not forward_only:
-
         # If defer_embedding_wgrad_compute is enabled we need to do the
         # weight gradient GEMM's here.
         finish_embedding_wgrad_compute(config, embedding_module)
@@ -1601,9 +1613,9 @@ def forward_backward_pipelining_with_interleaving(
         config.grad_sync_func, config.param_sync_func = grad_sync_func, param_sync_func
 
     if config.timers is not None:
-        config.timers('forward-backward').stop()
+        config.timers("forward-backward").stop()
 
-    if hasattr(config, 'enable_cuda_graph') and config.enable_cuda_graph:
+    if hasattr(config, "enable_cuda_graph") and config.enable_cuda_graph:
         create_cudagraphs()
 
     return forward_data_store
@@ -1748,14 +1760,14 @@ def forward_backward_pipelining_without_interleaving(
     stages. Returns dictionary with losses if the last stage, empty dict otherwise."""
 
     if isinstance(model, list):
-        assert (
-            len(model) == 1
-        ), "non-interleaved pipeline-parallel schedule does not support model chunking"
+        assert len(model) == 1, (
+            "non-interleaved pipeline-parallel schedule does not support model chunking"
+        )
         model = model[0]
     if isinstance(data_iterator, list):
-        assert (
-            len(data_iterator) == 1
-        ), "non-interleaved pipeline-parallel schedule does not support model chunking"
+        assert len(data_iterator) == 1, (
+            "non-interleaved pipeline-parallel schedule does not support model chunking"
+        )
         data_iterator = data_iterator[0]
 
     config = get_model_config(model)
@@ -1769,7 +1781,7 @@ def forward_backward_pipelining_without_interleaving(
         embedding_module = clear_embedding_activation_buffer(config, model)
 
     if config.timers is not None:
-        config.timers('forward-backward', log_level=1).start(barrier=config.barrier_with_L1_time)
+        config.timers("forward-backward", log_level=1).start(barrier=config.barrier_with_L1_time)
 
     # Disable async grad reductions
     no_sync_func = config.no_sync_func
@@ -1844,7 +1856,7 @@ def forward_backward_pipelining_without_interleaving(
     # Input, output tensors only need to be saved when doing backward passes
     input_tensors = None
     output_tensors = None
-    total_num_tokens = torch.tensor(0, dtype=torch.int).cuda()
+    total_num_tokens = torch.tensor(0, dtype=torch.int)
 
     if not forward_only:
         input_tensors = []
@@ -1914,7 +1926,9 @@ def forward_backward_pipelining_without_interleaving(
             collect_non_loss_data,
             checkpoint_activations_microbatch,
             check_first_val_step(
-                first_val_step, forward_only, (i == 0) and (num_warmup_microbatches == 0)
+                first_val_step,
+                forward_only,
+                (i == 0) and (num_warmup_microbatches == 0),
             ),
             current_microbatch=i + num_warmup_microbatches,
             encoder_decoder_xattn=encoder_decoder_xattn,
@@ -1963,7 +1977,6 @@ def forward_backward_pipelining_without_interleaving(
     # Run cooldown backward passes.
     if not forward_only:
         for i in range(num_warmup_microbatches):
-
             # Enable async grad reduction in the last backward pass
             # Note: If grad sync function is provided, only enable
             # async grad reduction in first pipeline stage. Other
@@ -1991,7 +2004,6 @@ def forward_backward_pipelining_without_interleaving(
                 config.grad_sync_func(model.parameters())
 
     if config.finalize_model_grads_func is not None and not forward_only:
-
         # If defer_embedding_wgrad_compute is enabled we need to do the
         # weight gradient GEMM's here.
         finish_embedding_wgrad_compute(config, embedding_module)
@@ -2004,9 +2016,9 @@ def forward_backward_pipelining_without_interleaving(
         )
 
     if config.timers is not None:
-        config.timers('forward-backward').stop()
+        config.timers("forward-backward").stop()
 
-    if hasattr(config, 'enable_cuda_graph') and config.enable_cuda_graph:
+    if hasattr(config, "enable_cuda_graph") and config.enable_cuda_graph:
         create_cudagraphs()
 
     return forward_data_store

@@ -1,4 +1,6 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 import logging
 import os
@@ -9,11 +11,16 @@ from typing import Dict, Optional, Tuple
 import numpy
 import torch
 
-from megatron.core.datasets.blended_megatron_dataset_config import BlendedMegatronDatasetConfig
+from megatron.core.datasets.blended_megatron_dataset_config import (
+    BlendedMegatronDatasetConfig,
+)
 from megatron.core.datasets.indexed_dataset import IndexedDataset
 from megatron.core.datasets.megatron_dataset import MegatronDataset
 from megatron.core.datasets.megatron_tokenizer import MegatronTokenizer
-from megatron.core.datasets.object_storage_utils import ObjectStorageConfig, is_object_storage_path
+from megatron.core.datasets.object_storage_utils import (
+    ObjectStorageConfig,
+    is_object_storage_path,
+)
 from megatron.core.datasets.utils import Split
 from megatron.core.utils import log_single_rank
 
@@ -90,7 +97,12 @@ class GPTDataset(MegatronDataset):
         config: GPTDatasetConfig,
     ) -> None:
         super().__init__(
-            indexed_dataset, dataset_path, indexed_indices, num_samples, index_split, config
+            indexed_dataset,
+            dataset_path,
+            indexed_indices,
+            num_samples,
+            index_split,
+            config,
         )
         self.masks_and_position_ids_are_cacheable = not any(
             [
@@ -286,9 +298,9 @@ class GPTDataset(MegatronDataset):
                 sample_parts.append(
                     self.dataset.get(self.document_index[i], offset=offset, length=length)
                 )
-        assert len(document_ids) == len(
-            sample_parts
-        ), f"len(document_ids) ({len(document_ids)}) != len(sample_parts) ({len(sample_parts)})"
+        assert len(document_ids) == len(sample_parts), (
+            f"len(document_ids) ({len(document_ids)}) != len(sample_parts) ({len(sample_parts)})"
+        )
 
         length = sum(map(len, sample_parts))
 
@@ -356,7 +368,6 @@ class GPTDataset(MegatronDataset):
             not cache_hit
             and (not torch.distributed.is_initialized() or torch.distributed.get_rank() == 0)
         ):
-
             log_single_rank(
                 logger,
                 logging.INFO,
@@ -400,7 +411,9 @@ class GPTDataset(MegatronDataset):
                 )
                 log_single_rank(logger, logging.DEBUG, f"> threshold: {threshold}")
                 log_single_rank(
-                    logger, logging.DEBUG, f"> num_samples_per_epoch: {num_samples_per_epoch}"
+                    logger,
+                    logging.DEBUG,
+                    f"> num_samples_per_epoch: {num_samples_per_epoch}",
                 )
 
             log_single_rank(
@@ -419,45 +432,93 @@ class GPTDataset(MegatronDataset):
                 drop_last_partial_sequence = self.config.drop_last_partial_validation_sequence
 
             # Build the sample index
-            from megatron.core.datasets import helpers
+            if not self.config.mock:
+                from megatron.core.datasets import helpers
 
-            if self.index_split == Split.valid:
-                drop_last_partial_sequence = self.config.drop_last_partial_validation_sequence
-            else:
-                drop_last_partial_sequence = True
+                if self.index_split == Split.valid:
+                    drop_last_partial_sequence = self.config.drop_last_partial_validation_sequence
+                else:
+                    drop_last_partial_sequence = True
 
-            assert document_index.dtype == numpy.int32
-            assert self.dataset.sequence_lengths.dtype == numpy.int32
-            if len(document_index) * 2 > len(self.dataset.sequence_lengths):
-                # If "access density" of sequence_lengths is high, force load the mmap-ed array
-                # into memory by making a copy.
-                #
-                # System performance benefits come from two aspects:
-                #   1. We sequentially pre-load the whole file, most of which we expect to read
-                #   2. The GIL is held when entering the c++ program, improving the speed of which
-                #      improves parallelism
-                sequence_lengths_for_cpp = self.dataset.sequence_lengths.copy()
-            else:
-                sequence_lengths_for_cpp = self.dataset.sequence_lengths
-            sample_index = helpers.build_sample_idx(
-                sequence_lengths_for_cpp,
-                document_index,
-                sequence_length,
-                num_epochs,
-                num_tokens_per_epoch,
-                drop_last_partial_sequence,
-                self.config.add_extra_token_to_sequence,
-            )
-
-            # Build the shuffle index
-            if separate_final_epoch:
-                shuffle_index = _build_shuffle_index(
-                    num_samples_sans_final_epoch, sample_index.shape[0] - 1, numpy_random_state
+                assert document_index.dtype == numpy.int32
+                assert self.dataset.sequence_lengths.dtype == numpy.int32
+                if len(document_index) * 2 > len(self.dataset.sequence_lengths):
+                    # If "access density" of sequence_lengths is high, force load the mmap-ed array
+                    # into memory by making a copy.
+                    #
+                    # System performance benefits come from two aspects:
+                    #   1. We sequentially pre-load the whole file, most of which we expect to read
+                    #   2. The GIL is held when entering the c++ program, improving the speed of which
+                    #      improves parallelism
+                    sequence_lengths_for_cpp = self.dataset.sequence_lengths.copy()
+                else:
+                    sequence_lengths_for_cpp = self.dataset.sequence_lengths
+                sample_index = helpers.build_sample_idx(
+                    sequence_lengths_for_cpp,
+                    document_index,
+                    sequence_length,
+                    num_epochs,
+                    num_tokens_per_epoch,
+                    drop_last_partial_sequence,
+                    self.config.add_extra_token_to_sequence,
                 )
             else:
-                shuffle_index = _build_shuffle_index(
-                    sample_index.shape[0] - 1, sample_index.shape[0] - 1, numpy_random_state
+                # Mock data path: Create dummy indices since C++ helpers are unavailable
+                log_single_rank(
+                    logger,
+                    logging.WARNING,
+                    "Skipping C++ helpers for mock data. Creating dummy sample/shuffle indices.",
                 )
+                # Determine the number of samples needed
+                # self.num_samples should be set based on arguments or calculated
+                # Use a default value like 16 if self.num_samples isn't readily available or is None,
+                # although it *should* be set by BlendedMegatronDatasetBuilder
+                num_mock_samples = self.num_samples if self.num_samples is not None else 16
+                log_single_rank(
+                    logger,
+                    logging.INFO,
+                    f"Creating dummy indices for {num_mock_samples} mock samples.",
+                )
+
+                # Create dummy sample_index: shape (num_samples + 1, 2)
+                # Content doesn't strictly matter for mock flow if downstream doesn't rely on it
+                sample_index = numpy.zeros((num_mock_samples + 1, 2), dtype=numpy.int64)
+
+                # Create dummy shuffle_index: needs to be created *after* sample_index
+                # Use the _build_shuffle_index helper for consistency
+                # Note: separate_final_epoch logic is likely not relevant for mock data,
+                # so we use the simpler path.
+                # Need numpy_random_state, which is defined earlier in the function
+                shuffle_index = _build_shuffle_index(
+                    num_mock_samples, num_mock_samples, numpy_random_state
+                )
+
+                # Define dummy document_index if needed later, though it might not be used
+                # in the mock data flow that avoids C++ helpers.
+                # document_index requires num_epochs, numpy_random_state, separate_final_epoch
+                # Let's create a minimal one for now.
+                document_index = _build_document_index(
+                    self.indices[:1],
+                    1,
+                    numpy_random_state,
+                    False,  # Use minimal inputs
+                )
+
+            # Build the shuffle index (This part is now inside the `if not self.config.mock` block
+            # or handled by the new `else` block for mock data)
+            # <<< SR: shuffle_index calculation is moved
+            # if separate_final_epoch:
+            #     shuffle_index = _build_shuffle_index(
+            #         num_samples_sans_final_epoch,
+            #         sample_index.shape[0] - 1,
+            #         numpy_random_state,
+            #     )
+            # else:
+            #     shuffle_index = _build_shuffle_index(
+            #         sample_index.shape[0] - 1,
+            #         sample_index.shape[0] - 1,
+            #         numpy_random_state,
+            #     )
 
             if path_to_cache:
                 os.makedirs(path_to_cache, exist_ok=True)
@@ -478,14 +539,18 @@ class GPTDataset(MegatronDataset):
             log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
             log_single_rank(
-                logger, logging.INFO, f"> total number of samples: {sample_index.shape[0] - 1}"
+                logger,
+                logging.INFO,
+                f"> total number of samples: {sample_index.shape[0] - 1}",
             )
             log_single_rank(logger, logging.INFO, f"> total number of epochs: {num_epochs}")
 
             return document_index, sample_index, shuffle_index
 
         log_single_rank(
-            logger, logging.INFO, f"Load the {type(self).__name__} {self.index_split.name} indices"
+            logger,
+            logging.INFO,
+            f"Load the {type(self).__name__} {self.index_split.name} indices",
         )
 
         log_single_rank(
@@ -494,7 +559,7 @@ class GPTDataset(MegatronDataset):
             f"\tLoad the document index from {os.path.basename(path_to_document_index)}",
         )
         t_beg = time.time()
-        document_index = numpy.load(path_to_document_index, allow_pickle=True, mmap_mode='r')
+        document_index = numpy.load(path_to_document_index, allow_pickle=True, mmap_mode="r")
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
@@ -504,7 +569,7 @@ class GPTDataset(MegatronDataset):
             f"\tLoad the sample index from {os.path.basename(path_to_sample_index)}",
         )
         t_beg = time.time()
-        sample_index = numpy.load(path_to_sample_index, allow_pickle=True, mmap_mode='r')
+        sample_index = numpy.load(path_to_sample_index, allow_pickle=True, mmap_mode="r")
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
@@ -514,12 +579,14 @@ class GPTDataset(MegatronDataset):
             f"\tLoad the shuffle index from {os.path.basename(path_to_shuffle_index)}",
         )
         t_beg = time.time()
-        shuffle_index = numpy.load(path_to_shuffle_index, allow_pickle=True, mmap_mode='r')
+        shuffle_index = numpy.load(path_to_shuffle_index, allow_pickle=True, mmap_mode="r")
         t_end = time.time()
         log_single_rank(logger, logging.DEBUG, f"\t> time elapsed: {t_end - t_beg:4f} seconds")
 
         log_single_rank(
-            logger, logging.INFO, f"> total number of samples: {sample_index.shape[0] - 1}"
+            logger,
+            logging.INFO,
+            f"> total number of samples: {sample_index.shape[0] - 1}",
         )
 
         return document_index, sample_index, shuffle_index

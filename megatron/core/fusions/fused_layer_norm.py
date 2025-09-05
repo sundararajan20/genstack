@@ -1,4 +1,6 @@
 # Copyright (c) 2023, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 import importlib
 import inspect
@@ -63,9 +65,9 @@ class FusedLayerNorm(torch.nn.Module):
         self.config = config
 
         self.zero_centered_gamma = self.config.layernorm_zero_centered_gamma
-        assert (
-            self.config.normalization == "LayerNorm"
-        ), f'({self.config.normalization}) is not supported in FusedLayerNorm'
+        assert self.config.normalization == "LayerNorm", (
+            f"({self.config.normalization}) is not supported in FusedLayerNorm"
+        )
 
         # List of hiddens sizes supported in the persistent layer norm kernel
         # If the hidden size is not supported, fall back to the non-persistent
@@ -100,26 +102,49 @@ class FusedLayerNorm(torch.nn.Module):
         if hidden_size not in persist_ln_hidden_sizes or not HAVE_PERSIST_LAYER_NORM:
             persist_layer_norm = False
 
-        if not persist_layer_norm and not HAVE_FUSED_LAYER_NORM:
-            # TODO: Add pytorch only layer norm
-            raise ValueError(f'Apex must be installed to use FusedLayerNorm.')
-
+        # Convert hidden_size to tuple if it's an integer
         if isinstance(hidden_size, numbers.Integral):
             hidden_size = (hidden_size,)
         self.hidden_size = torch.Size(hidden_size)
         self.eps = eps
-        # Parameters need to be initialized with torch.empty rather than torch.Tensor for correct device placement with nemo2.
-        self.weight = Parameter(torch.empty(*hidden_size))
-        self.bias = Parameter(torch.empty(*hidden_size))
-        self.reset_parameters()
         self.persist_layer_norm = persist_layer_norm
         self.sequence_parallel = self.config.sequence_parallel
 
-        # set sequence parallelism flag on weight and bias parameters
-        setattr(self.weight, 'sequence_parallel', self.sequence_parallel)
-        setattr(self.bias, 'sequence_parallel', self.sequence_parallel)
+        # Check if Apex is available for FusedLayerNorm
+        self.use_pytorch_norm = not (persist_layer_norm or HAVE_FUSED_LAYER_NORM)
+
+        if self.use_pytorch_norm:
+            # Fall back to PyTorch's LayerNorm when Apex is not available
+            self.layer_norm = torch.nn.LayerNorm(
+                normalized_shape=self.hidden_size,
+                eps=self.eps,
+                elementwise_affine=True,
+            )
+            # Initialize with our custom parameters
+            if self.zero_centered_gamma:
+                init.zeros_(self.layer_norm.weight)
+                init.zeros_(self.layer_norm.bias)
+            else:
+                init.ones_(self.layer_norm.weight)
+                init.zeros_(self.layer_norm.bias)
+
+            # Set sequence parallelism flag on weight and bias parameters
+            setattr(self.layer_norm.weight, "sequence_parallel", self.sequence_parallel)
+            setattr(self.layer_norm.bias, "sequence_parallel", self.sequence_parallel)
+
+        else:
+            # Parameters need to be initialized with torch.empty rather than torch.Tensor for correct device placement with nemo2.
+            self.weight = Parameter(torch.empty(*hidden_size))
+            self.bias = Parameter(torch.empty(*hidden_size))
+            self.reset_parameters()
+
+            # set sequence parallelism flag on weight and bias parameters
+            setattr(self.weight, "sequence_parallel", self.sequence_parallel)
+            setattr(self.bias, "sequence_parallel", self.sequence_parallel)
 
     def reset_parameters(self):
+        if not hasattr(self, "weight"):
+            return  # For PyTorch Layer Norm case
 
         if self.zero_centered_gamma:
             init.zeros_(self.weight)
@@ -129,13 +154,20 @@ class FusedLayerNorm(torch.nn.Module):
             init.zeros_(self.bias)
 
     def forward(self, input: Tensor) -> Tensor:
+        # Use PyTorch's LayerNorm if Apex is not available
+        if self.use_pytorch_norm:
+            return self.layer_norm(input)
 
         weight = self.weight + 1 if self.zero_centered_gamma else self.weight
 
         if self.persist_layer_norm:
-            if 'memory_efficient' in inspect.getfullargspec(FastLayerNormFN.forward).args:
+            if "memory_efficient" in inspect.getfullargspec(FastLayerNormFN.forward).args:
                 output = FastLayerNormFN.apply(
-                    input, weight, self.bias, self.eps, self.config.memory_efficient_layer_norm
+                    input,
+                    weight,
+                    self.bias,
+                    self.eps,
+                    self.config.memory_efficient_layer_norm,
                 )
             else:
                 output = FastLayerNormFN.apply(input, weight, self.bias, self.eps)
@@ -150,7 +182,7 @@ class FusedLayerNorm(torch.nn.Module):
 
         else:
             if (
-                'memory_efficient'
+                "memory_efficient"
                 in inspect.getfullargspec(FusedLayerNormAffineFunction.forward).args
             ):
                 return FusedLayerNormAffineFunction.apply(

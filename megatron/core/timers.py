@@ -1,4 +1,6 @@
 # Copyright (c) 2022, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 """Megatron timers."""
 
@@ -63,7 +65,7 @@ class DummyTimer(TimerBase):
     """Dummy Timer."""
 
     def __init__(self):
-        super().__init__('dummy timer')
+        super().__init__("dummy timer")
 
     def start(self, barrier=False):
         return
@@ -76,8 +78,7 @@ class DummyTimer(TimerBase):
 
     def elapsed(self, reset=True, barrier=False):
         raise Exception(
-            'dummy timer should not be used to calculate elapsed time, '
-            'check if timer\'s log_level <= self._log_level.'
+            "dummy timer should not be used to calculate elapsed time, check if timer's log_level <= self._log_level."
         )
 
     def active_time(self):
@@ -85,8 +86,7 @@ class DummyTimer(TimerBase):
         Note: Not supported for DummyTimer.
         """
         raise Exception(
-            'active timer should not be used to calculate elapsed time, '
-            'check if timer\'s log_level <= self._log_level.'
+            "active timer should not be used to calculate elapsed time, check if timer's log_level <= self._log_level."
         )
 
 
@@ -130,10 +130,11 @@ class Timer(TimerBase):
         Args:
             barrier (bool, optional): Synchronizes ranks before starting. Defaults to False.
         """
-        assert not self._started, 'timer has already been started'
+        assert not self._started, "timer has already been started"
         if barrier:
             torch.distributed.barrier(group=self._barrier_group)
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         self._start_time = time.time()
         self._started = True
 
@@ -143,10 +144,11 @@ class Timer(TimerBase):
         Args:
             barrier (bool, optional): Synchronizes ranks before stopping. Defaults to False.
         """
-        assert self._started, 'timer is not started'
+        assert self._started, "timer is not started"
         if barrier:
             torch.distributed.barrier(group=self._barrier_group)
-        torch.cuda.synchronize()
+        if torch.cuda.is_available():
+            torch.cuda.synchronize()
         elapsed = time.time() - self._start_time
         self._elapsed += elapsed
         self._active_time += elapsed
@@ -199,11 +201,11 @@ class Timers:
                               Allowed: ['max', 'minmax', 'all'].
         """
         self._log_level = log_level
-        allowed_log_options = set(['max', 'minmax', 'all'])
-        assert (
-            log_option in allowed_log_options
-        ), 'input log option {} is invalid. It must be one of {}'.format(
-            log_option, allowed_log_options
+        allowed_log_options = set(["max", "minmax", "all"])
+        assert log_option in allowed_log_options, (
+            "input log option {} is invalid. It must be one of {}".format(
+                log_option, allowed_log_options
+            )
         )
         self._log_option = log_option
         self._timers = {}
@@ -218,18 +220,19 @@ class Timers:
         if name in self._timers:
             if log_level is not None:
                 assert log_level == self._log_levels[name], (
-                    'input log level {} does not match already existing '
-                    'log level {} for {} timer'.format(log_level, self._log_levels[name], name)
+                    "input log level {} does not match already existing log level {} for {} timer".format(
+                        log_level, self._log_levels[name], name
+                    )
                 )
             return self._timers[name]
         # If timer does not exist and no log level is provided,
         # set it to the max log level which is 2.
         if log_level is None:
             log_level = self._max_log_level
-        assert (
-            log_level <= self._max_log_level
-        ), 'log level {} is larger than max supported log level {}'.format(
-            log_level, self._max_log_level
+        assert log_level <= self._max_log_level, (
+            "log level {} is larger than max supported log level {}".format(
+                log_level, self._max_log_level
+            )
         )
         # Now if the input log level is larger than the one set for
         # the timers class, just ignore it and return a dummy timer.
@@ -270,7 +273,9 @@ class Timers:
         # and since we are only gathering a small amount of data,
         # it should be ok to use all-gather instead of gather.
         rank_name_to_time = torch.zeros(
-            (world_size, len(names)), dtype=torch.float, device=torch.cuda.current_device()
+            (world_size, len(names)),
+            dtype=torch.float,
+            device="meta",
         )
         for i, name in enumerate(names):
             if name in self._timers:
@@ -281,7 +286,10 @@ class Timers:
                 rank_name_to_time[rank, i] = self._timers[name].elapsed(reset=reset)
 
         # See the note above for why we are not using gather.
-        dist_all_gather_func(rank_name_to_time.view(-1), rank_name_to_time[rank, :].view(-1))
+        torch.distributed.all_gather(
+            tensor_list=[rank_name_to_time[i, :] for i in range(world_size)],
+            tensor=rank_name_to_time[rank, :].view(-1),
+        )
 
         return rank_name_to_time
 
@@ -308,16 +316,16 @@ class Timers:
         if not name_to_min_max_time:
             return None
         if max_only:
-            output_string = 'max time across ranks (ms):'
+            output_string = "max time across ranks (ms):"
         else:
-            output_string = '(min, max) time across ranks (ms):'
+            output_string = "(min, max) time across ranks (ms):"
         for name in name_to_min_max_time:
             min_time, max_time = name_to_min_max_time[name]
             if max_only:
-                output_string += '\n    {}: {:.2f}'.format((name + ' ').ljust(48, '.'), max_time)
+                output_string += "\n    {}: {:.2f}".format((name + " ").ljust(48, "."), max_time)
             else:
-                output_string += '\n    {}: ({:.2f}, {:.2f})'.format(
-                    (name + ' ').ljust(48, '.'), min_time, max_time
+                output_string += "\n    {}: ({:.2f}, {:.2f})".format(
+                    (name + " ").ljust(48, "."), min_time, max_time
                 )
         return output_string
 
@@ -325,7 +333,7 @@ class Timers:
         """Report times across all ranks."""
         rank_name_to_time = self._get_elapsed_time_all_ranks(names, reset, barrier)
 
-        output_string = 'times across ranks (ms):'
+        output_string = "times across ranks (ms):"
         no_reported_timing = True
         for i, name in enumerate(names):
             not_yet_found = True
@@ -334,8 +342,8 @@ class Timers:
                     no_reported_timing = False
                     if not_yet_found:
                         not_yet_found = False
-                        output_string += '\n  {}:'.format(name)
-                    output_string += '\n     rank {:2d}: {:.2f}'.format(
+                        output_string += "\n  {}:".format(name)
+                    output_string += "\n     rank {:2d}: {:.2f}".format(
                         rank, rank_name_to_time[rank, i] / normalizer
                     )
         if no_reported_timing:
@@ -371,19 +379,19 @@ class Timers:
             names = self._timers.keys()
 
         assert normalizer > 0.0
-        if self._log_option in ['max', 'minmax']:
+        if self._log_option in ["max", "minmax"]:
             max_only = False
-            if self._log_option == 'max':
+            if self._log_option == "max":
                 max_only = True
             output_string = self._get_global_min_max_time_string(
                 names, reset, barrier, normalizer / 1000.0, max_only
             )
-        elif self._log_option == 'all':
+        elif self._log_option == "all":
             output_string = self._get_all_ranks_time_string(
                 names, reset, barrier, normalizer / 1000.0
             )
         else:
-            raise Exception('unknown timing log option {}'.format(self._log_option))
+            raise Exception("unknown timing log option {}".format(self._log_option))
         return output_string
 
     def log(
@@ -446,4 +454,4 @@ class Timers:
         if writer is not None:
             for name in name_to_min_max_time:
                 _, max_time = name_to_min_max_time[name]
-                writer.add_scalar(name + '-time', max_time, iteration)
+                writer.add_scalar(name + "-time", max_time, iteration)

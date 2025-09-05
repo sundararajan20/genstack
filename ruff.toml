@@ -1,0 +1,22 @@
+# Match [MAIN]
+line-length = 100
+exclude = ["tests"]
+
+# Match [MESSAGES CONTROL]
+# In Pylint you had disable=all and then re-enable a small subset.
+# In Ruff, you do the opposite: select exactly the rules you want.
+select = [
+    "D101", # missing-class-docstring
+    "D103", # missing-function-docstring
+    "F401", # unused-import
+    "E501", # line-too-long
+    "F821", # undefined name (closest to E0606)
+    "F823", # local variable referenced before assignment
+]
+
+# Enable pydocstyle conventions (so D101/D103 work)
+[lint.pydocstyle]
+convention = "google"  # or "numpy"/"pep257" depending on style
+
+[format]
+quote-style = "preserve"

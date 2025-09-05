@@ -1,0 +1,18 @@
+{
+  "model_size": "175b",
+  "model_config": {
+    "hidden_size": 12288,
+    "num_layers": 96,
+    "num_attention_heads": 96,
+    "seq_length": 2048
+  },
+  "data_parallel_size": 2,
+  "tensor_model_parallel_size": 4,
+  "pipeline_model_parallel_size": 6,
+  "context_parallel_size": 1,
+  "world_size": 48,
+  "seed": 1234,
+  "timestamp": "20250810_184348",
+  "num_micro_batches": 4,
+  "global_batch_size": 1024
+}

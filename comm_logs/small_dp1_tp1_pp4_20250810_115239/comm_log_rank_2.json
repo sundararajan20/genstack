@@ -1,0 +1,2722 @@
+[
+  {
+    "op": "init_process_group",
+    "call_id": 0,
+    "backend": "gloo",
+    "world_size": 4,
+    "src_rank": 2
+  },
+  {
+    "op": "init_process_group",
+    "call_id": 1,
+    "backend": "gloo",
+    "world_size": 4,
+    "src_rank": 2
+  },
+  {
+    "op": "init_process_group",
+    "call_id": 2,
+    "backend": "gloo",
+    "world_size": 4,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 3,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 4,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 5,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 6,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 7,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 8,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 9,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 10,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 11,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 12,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 13,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 14,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 15,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 16,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 17,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 18,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 19,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 20,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 21,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 22,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 23,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 24,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 25,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 26,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 27,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 28,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 29,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 30,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 31,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 32,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 33,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 34,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 35,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 36,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 37,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 38,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 39,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 40,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 41,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 42,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 43,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 44,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 45,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 46,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 47,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 48,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 49,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 50,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 51,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 52,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 53,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 54,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 55,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 56,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 57,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 58,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 59,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 60,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 61,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 62,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 63,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 64,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 65,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 66,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 67,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 68,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 69,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 70,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 71,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 72,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 73,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 74,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 75,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 76,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 77,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 78,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 79,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 80,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 81,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 82,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 83,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 84,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 85,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 86,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 87,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 88,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 89,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 90,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 91,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 92,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 93,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 94,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 95,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 96,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 97,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 98,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 99,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 100,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 101,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 102,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 103,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 104,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 105,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 106,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 107,
+    "ranks": [
+      0,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 108,
+    "ranks": [
+      0,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 109,
+    "ranks": [
+      0,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 110,
+    "ranks": [
+      0,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 111,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 112,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 113,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 114,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 115,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 116,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 117,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 118,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 119,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 120,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 121,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 122,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 123,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 124,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 125,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 126,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 127,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 128,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 129,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 130,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 131,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 132,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 133,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 134,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 135,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 136,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 137,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 138,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 139,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 140,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 141,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 142,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 143,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 144,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 145,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 146,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 147,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 148,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 149,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 150,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 151,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 152,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 153,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 154,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 155,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 156,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 157,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 158,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 159,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 160,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 161,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 162,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 163,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 164,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 165,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 166,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 167,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 168,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 169,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 170,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 171,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 172,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 173,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 174,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 175,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 176,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 177,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 178,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 179,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 180,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 181,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 182,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 183,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 184,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 185,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 186,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 187,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 188,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 189,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 190,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 191,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 192,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 193,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 194,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 195,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 196,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 197,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 198,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 199,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 200,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 201,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 202,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 203,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 204,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 205,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 206,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 207,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 208,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 209,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 210,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 211,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 212,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 213,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 214,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 215,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 216,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 217,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 218,
+    "ranks": [
+      0
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 219,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 220,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 221,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 222,
+    "ranks": [
+      0
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 223,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 224,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 225,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 226,
+    "ranks": [
+      1
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 227,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 228,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 229,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 230,
+    "ranks": [
+      1
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 231,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 232,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 233,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 234,
+    "ranks": [
+      2
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 235,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 236,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 237,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 238,
+    "ranks": [
+      2
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 239,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 240,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 241,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 242,
+    "ranks": [
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 243,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 244,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 245,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 246,
+    "ranks": [
+      3
+    ],
+    "backend": "gloo",
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 247,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 248,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 249,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "new_group",
+    "call_id": 250,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "backend": null,
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 251,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "all_reduce",
+    "call_id": 252,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "shape": [
+      1
+    ],
+    "dtype": "torch.float64",
+    "reduce_op": "RedOpType.MIN",
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 253,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 254,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 255,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 256,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 257,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 258,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 259,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "broadcast",
+    "call_id": 260,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "shape": [
+      3
+    ],
+    "dtype": "torch.int64",
+    "src": 0,
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 261,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 262,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 263,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 264,
+    "batch_idx": 0,
+    "batch_size": 1,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 265,
+    "batch_idx": 0,
+    "batch_size": 1,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 266,
+    "batch_idx": 0,
+    "batch_size": 1,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 267,
+    "batch_idx": 0,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 268,
+    "batch_idx": 1,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 269,
+    "batch_idx": 0,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 270,
+    "batch_idx": 1,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 271,
+    "batch_idx": 0,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 272,
+    "batch_idx": 1,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 273,
+    "batch_idx": 0,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 274,
+    "batch_idx": 1,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 275,
+    "batch_idx": 0,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 276,
+    "batch_idx": 1,
+    "batch_size": 2,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 277,
+    "batch_idx": 0,
+    "batch_size": 1,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_irecv",
+    "call_id": 278,
+    "batch_idx": 0,
+    "batch_size": 1,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 3,
+    "src_rank": 2
+  },
+  {
+    "op": "batch_isend",
+    "call_id": 279,
+    "batch_idx": 0,
+    "batch_size": 1,
+    "shape": [
+      1024,
+      4,
+      768
+    ],
+    "dtype": "torch.float32",
+    "peer": 1,
+    "src_rank": 2
+  },
+  {
+    "op": "all_reduce",
+    "call_id": 280,
+    "ranks": [
+      2
+    ],
+    "shape": [
+      21263616
+    ],
+    "dtype": "torch.float32",
+    "reduce_op": "RedOpType.SUM",
+    "src_rank": 2
+  },
+  {
+    "op": "all_reduce",
+    "call_id": 281,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "shape": [],
+    "dtype": "torch.float32",
+    "reduce_op": "RedOpType.SUM",
+    "src_rank": 2
+  },
+  {
+    "op": "barrier",
+    "call_id": 282,
+    "ranks": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "src_rank": 2
+  }
+]

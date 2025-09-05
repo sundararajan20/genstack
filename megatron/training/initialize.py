@@ -1,6 +1,9 @@
 # Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 """Megatron initialization."""
+
 import logging
 import os
 import random
@@ -55,10 +58,18 @@ def initialize_megatron(
     if not allow_no_cuda:
         # Make sure cuda is available.
         assert torch.cuda.is_available(), "Megatron requires CUDA."
+    else:
+        # Running in CPU-only mode
+        if not torch.cuda.is_available():
+            print("Running in CPU-only mode with meta tensors because allow_no_cuda=True")
 
     # Parse arguments
     if parsed_args is None:
-        args = parse_args(extra_args_provider, ignore_unknown_args)
+        # Call parse_args using keyword args to avoid positional ambiguity
+        args = parse_args(
+            extra_args_provider=extra_args_provider,
+            ignore_unknown_args=ignore_unknown_args,
+        )
     else:
         args = parsed_args
 
@@ -94,11 +105,11 @@ def initialize_megatron(
 
     # init rerun state
     def state_save_func():
-        return {'rng_tracker_states': tensor_parallel.get_cuda_rng_tracker().get_states()}
+        return {"rng_tracker_states": tensor_parallel.get_cuda_rng_tracker().get_states()}
 
     def state_restore_func(state_dict):
-        if state_dict['rng_tracker_states']:
-            tensor_parallel.get_cuda_rng_tracker().set_states(state_dict['rng_tracker_states'])
+        if state_dict["rng_tracker_states"]:
+            tensor_parallel.get_cuda_rng_tracker().set_states(state_dict["rng_tracker_states"])
 
     args = get_args()
     initialize_rerun_state_machine(
@@ -133,7 +144,9 @@ def initialize_megatron(
         if args.num_experts is not None:
             from megatron.core.transformer.moe.router import MoEAuxLossAutoScaler
 
-            MoEAuxLossAutoScaler.set_loss_scale(torch.ones(1, device=torch.cuda.current_device()))
+            # Always use meta device for consistent behavior
+            device = "meta"
+            MoEAuxLossAutoScaler.set_loss_scale(torch.ones(1, device=device))
 
     if skip_mpu_initialization:
         return None
@@ -157,7 +170,7 @@ def initialize_megatron(
         _init_autoresume()
 
         # Compile dependencies.
-        _compile_dependencies()
+        _compile_dependencies(allow_no_cuda=allow_no_cuda)
 
         if args.tp_comm_overlap:
             # TODO: Should this be activated with just decoder-tp-comm-overlap too?
@@ -167,9 +180,17 @@ def initialize_megatron(
         return None
 
 
-def _compile_dependencies():
-
+def _compile_dependencies(allow_no_cuda=False):
     args = get_args()
+
+    # Skip compilation if running without CUDA (simulation mode)
+    if allow_no_cuda:
+        if args.rank == 0:
+            print("> skipping C++ helper and fused kernel compilation in no-CUDA mode.")
+        # Need barrier to prevent ranks from proceeding before rank 0 potentially compiles
+        if torch.distributed.is_initialized():
+            torch.distributed.barrier()
+        return
 
     # =========================
     # Compile dataset C++ code.
@@ -182,8 +203,9 @@ def _compile_dependencies():
 
         compile_helpers()
         print(
-            ">>> done with dataset index builder. Compilation time: {:.3f} "
-            "seconds".format(time.time() - start_time),
+            ">>> done with dataset index builder. Compilation time: {:.3f} seconds".format(
+                time.time() - start_time
+            ),
             flush=True,
         )
 
@@ -227,8 +249,9 @@ def _compile_dependencies():
     torch.distributed.barrier()
     if torch.distributed.get_rank() == 0:
         print(
-            ">>> done with compiling and loading fused kernels. "
-            "Compilation time: {:.3f} seconds".format(time.time() - start_time),
+            ">>> done with compiling and loading fused kernels. Compilation time: {:.3f} seconds".format(
+                time.time() - start_time
+            ),
             flush=True,
         )
 
@@ -244,8 +267,7 @@ def _initialize_tp_communicators():
 
     except ImportError:
         raise RuntimeError(
-            "Tensor Parallel Communication/GEMM Overlap optimization needs 'yaml' and "
-            "'transformer_engine' packages"
+            "Tensor Parallel Communication/GEMM Overlap optimization needs 'yaml' and 'transformer_engine' packages"
         )
 
     args = get_args()
@@ -256,7 +278,7 @@ def _initialize_tp_communicators():
     else:
         ub_cfgs = {}
 
-    if getattr(args, 'decoder_tp_comm_overlap', False):
+    if getattr(args, "decoder_tp_comm_overlap", False):
         input_shape = [
             (args.decoder_seq_length * args.micro_batch_size) // args.context_parallel_size,
             args.hidden_size,
@@ -277,12 +299,12 @@ def _initialize_tp_communicators():
             bootstrap_backend=args.tp_comm_bootstrap_backend,
         )
     else:
-        if args.tp_comm_bootstrap_backend != 'mpi':
+        if args.tp_comm_bootstrap_backend != "mpi":
             warnings.warn(
                 f"Transformer Engine v{get_te_version()} supports only MPI bootstrap backend."
             )
         # Create a MPI process group to help with TP communication overlap bootstrap.
-        create_group(backend='mpi', group_desc='TP_BOOTSTRAP_GROUP_MPI')
+        create_group(backend="mpi", group_desc="TP_BOOTSTRAP_GROUP_MPI")
 
         te_module.base.initialize_ub(
             shape=input_shape,
@@ -296,77 +318,74 @@ def _initialize_distributed(get_embedding_ranks, get_position_embedding_ranks):
     """Initialize torch.distributed and core model parallel."""
     args = get_args()
 
-    device_count = torch.cuda.device_count()
+    device_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
     if torch.distributed.is_initialized():
-
         if args.rank == 0:
             print(
-                "torch distributed is already initialized, " "skipping initialization ...",
+                "torch distributed is already initialized, skipping initialization ...",
                 flush=True,
             )
         args.rank = torch.distributed.get_rank()
         args.world_size = torch.distributed.get_world_size()
 
     else:
-
         if args.rank == 0:
             print("> initializing torch distributed ...", flush=True)
         # Manually set the device ids.
-        if device_count > 0:
+        if device_count > 0 and torch.cuda.is_available():
             torch.cuda.set_device(args.local_rank)
-            device_id = torch.device(f'cuda:{args.local_rank}')
+            device_id = torch.device(f"cuda:{args.local_rank}")
         else:
             device_id = None
 
         # Set to non-default stream for cudagraph capturing.
-        if args.external_cuda_graph:
+        if args.external_cuda_graph and torch.cuda.is_available():
             torch.cuda.set_stream(torch.cuda.Stream())
 
         # Call the init process
         init_process_group_kwargs = {
-            'backend': args.distributed_backend,
-            'world_size': args.world_size,
-            'rank': args.rank,
-            'timeout': timedelta(minutes=args.distributed_timeout_minutes),
+            "backend": args.distributed_backend,
+            "world_size": args.world_size,
+            "rank": args.rank,
+            "timeout": timedelta(minutes=args.distributed_timeout_minutes),
         }
 
         torch.distributed.init_process_group(**init_process_group_kwargs)
 
     # Set the tensor model-parallel, pipeline model-parallel, and
     # data-parallel communicators.
-    if device_count > 0:
-        if mpu.model_parallel_is_initialized():
-            print("model parallel is already initialized")
-        else:
-            mpu.initialize_model_parallel(
-                args.tensor_model_parallel_size,
-                args.pipeline_model_parallel_size,
-                args.virtual_pipeline_model_parallel_size,
-                args.pipeline_model_parallel_split_rank,
-                pipeline_model_parallel_comm_backend=args.pipeline_model_parallel_comm_backend,
-                context_parallel_size=args.context_parallel_size,
-                hierarchical_context_parallel_sizes=args.hierarchical_context_parallel_sizes,
-                expert_model_parallel_size=args.expert_model_parallel_size,
-                num_distributed_optimizer_instances=args.num_distributed_optimizer_instances,
-                expert_tensor_parallel_size=args.expert_tensor_parallel_size,
-                distributed_timeout_minutes=args.distributed_timeout_minutes,
-                nccl_communicator_config_path=args.nccl_communicator_config_path,
-                order='tp-cp-ep-dp-pp' if not args.use_tp_pp_dp_mapping else 'tp-cp-ep-pp-dp',
-                encoder_tensor_model_parallel_size=args.encoder_tensor_model_parallel_size,
-                encoder_pipeline_model_parallel_size=args.encoder_pipeline_model_parallel_size,
-                get_embedding_ranks=get_embedding_ranks,
-                get_position_embedding_ranks=get_position_embedding_ranks,
-                create_gloo_process_groups=args.enable_gloo_process_groups,
+    # Always initialize MPU, even if device_count is 0 (for CPU/Gloo simulation)
+    # if device_count > 0:
+    if mpu.model_parallel_is_initialized():
+        print("model parallel is already initialized")
+    else:
+        mpu.initialize_model_parallel(
+            args.tensor_model_parallel_size,
+            args.pipeline_model_parallel_size,
+            args.virtual_pipeline_model_parallel_size,
+            args.pipeline_model_parallel_split_rank,
+            pipeline_model_parallel_comm_backend=args.pipeline_model_parallel_comm_backend,
+            context_parallel_size=args.context_parallel_size,
+            hierarchical_context_parallel_sizes=args.hierarchical_context_parallel_sizes,
+            expert_model_parallel_size=args.expert_model_parallel_size,
+            num_distributed_optimizer_instances=args.num_distributed_optimizer_instances,
+            expert_tensor_parallel_size=args.expert_tensor_parallel_size,
+            distributed_timeout_minutes=args.distributed_timeout_minutes,
+            nccl_communicator_config_path=args.nccl_communicator_config_path,
+            order="tp-cp-ep-dp-pp" if not args.use_tp_pp_dp_mapping else "tp-cp-ep-pp-dp",
+            encoder_tensor_model_parallel_size=args.encoder_tensor_model_parallel_size,
+            encoder_pipeline_model_parallel_size=args.encoder_pipeline_model_parallel_size,
+            get_embedding_ranks=get_embedding_ranks,
+            get_position_embedding_ranks=get_position_embedding_ranks,
+            create_gloo_process_groups=args.enable_gloo_process_groups,
+        )
+        if args.rank == 0:
+            print(
+                f"> initialized tensor model parallel with size {mpu.get_tensor_model_parallel_world_size()}"
             )
-            if args.rank == 0:
-                print(
-                    f"> initialized tensor model parallel with size "
-                    f"{mpu.get_tensor_model_parallel_world_size()}"
-                )
-                print(
-                    f"> initialized pipeline model parallel with size "
-                    f"{mpu.get_pipeline_model_parallel_world_size()}"
-                )
+            print(
+                f"> initialized pipeline model parallel with size {mpu.get_pipeline_model_parallel_world_size()}"
+            )
 
 
 def _init_autoresume():
@@ -395,7 +414,7 @@ def _set_random_seed(
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        if torch.cuda.device_count() > 0:
+        if torch.cuda.device_count() > 0 and torch.cuda.is_available():
             tensor_parallel.model_parallel_cuda_manual_seed(
                 seed, te_rng_tracker, inference_rng_tracker, use_cudagraphable_rng
             )
@@ -414,6 +433,10 @@ def write_args_to_tensorboard():
 
 def set_jit_fusion_options():
     """Set PyTorch JIT layer fusion options."""
+    # Skip GPU fusion options if CUDA is not available
+    if not torch.cuda.is_available():
+        return
+
     # flags required to enable jit fusion kernels
     if is_torch_min_version("2.2.0a0"):
         pass  # we're using torch.compile for jit fusion
@@ -439,6 +462,10 @@ def set_jit_fusion_options():
 def _warmup_jit_function():
     """Compilie JIT functions before the main training steps"""
     args = get_args()
+    # Skip warmup if CUDA is not available
+    if not torch.cuda.is_available():
+        return
+
     if args.bf16:
         dtype = torch.bfloat16
     elif args.fp16:
@@ -448,7 +475,9 @@ def _warmup_jit_function():
 
     # Warmup fused bias+gelu
     bias = torch.rand(
-        args.ffn_hidden_size // args.tensor_model_parallel_size, dtype=dtype, device="cuda"
+        args.ffn_hidden_size // args.tensor_model_parallel_size,
+        dtype=dtype,
+        device="cuda",
     )
     input = torch.rand(
         (
@@ -476,12 +505,20 @@ def _warmup_jit_function():
     else:
         seq_length = args.seq_length
     input = torch.rand(
-        (seq_length // args.context_parallel_size, args.micro_batch_size, args.hidden_size),
+        (
+            seq_length // args.context_parallel_size,
+            args.micro_batch_size,
+            args.hidden_size,
+        ),
         dtype=dtype,
         device="cuda",
     )
     residual = torch.rand(
-        (seq_length // args.context_parallel_size, args.micro_batch_size, args.hidden_size),
+        (
+            seq_length // args.context_parallel_size,
+            args.micro_batch_size,
+            args.hidden_size,
+        ),
         dtype=dtype,
         device="cuda",
     )
@@ -511,12 +548,12 @@ def setup_logging() -> None:
     """
     args = get_args()
     logging_level = None
-    env_logging_level = os.getenv('MEGATRON_LOGGING_LEVEL', None)
+    env_logging_level = os.getenv("MEGATRON_LOGGING_LEVEL", None)
     if env_logging_level is not None:
         logging_level = int(env_logging_level)
     if args.logging_level is not None:
         logging_level = args.logging_level
 
     if logging_level is not None:
-        logger.info(f'Setting logging level to {logging_level}')
+        logger.info(f"Setting logging level to {logging_level}")
         logging.getLogger().setLevel(logging_level)

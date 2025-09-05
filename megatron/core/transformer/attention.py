@@ -1,4 +1,6 @@
 # Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2025, The Board of Trustees of the Leland Stanford Junior University.
+# All rights reserved.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -117,15 +119,15 @@ class Attention(MegatronModule, ABC):
 
         if model_comm_pgs is None:
             model_comm_pgs = ModelCommProcessGroups.use_mpu_process_groups(
-                required_pgs=['tp', 'cp']
+                required_pgs=["tp", "cp"]
             )
         else:
-            assert hasattr(
-                model_comm_pgs, 'tp'
-            ), "Attention model_comm_pgs must have tp process group"
-            assert hasattr(
-                model_comm_pgs, 'cp'
-            ), "Attention model_comm_pgs must have cp process group"
+            assert hasattr(model_comm_pgs, "tp"), (
+                "Attention model_comm_pgs must have tp process group"
+            )
+            assert hasattr(model_comm_pgs, "cp"), (
+                "Attention model_comm_pgs must have cp process group"
+            )
         self.model_comm_pgs = model_comm_pgs
 
         # Per attention head and per partition values
@@ -152,7 +154,7 @@ class Attention(MegatronModule, ABC):
         )
 
         self.checkpoint_core_attention = (
-            self.config.recompute_granularity == 'selective'
+            self.config.recompute_granularity == "selective"
             and "core_attn" in self.config.recompute_modules
         )
 
@@ -167,7 +169,7 @@ class Attention(MegatronModule, ABC):
             input_is_parallel=True,
             skip_bias_add=True,
             is_expert=False,
-            tp_comm_buffer_name='proj',
+            tp_comm_buffer_name="proj",
             tp_group=self.model_comm_pgs.tp,
         )
 
@@ -206,7 +208,14 @@ class Attention(MegatronModule, ABC):
             attn_mask_type = self.attn_mask_type
         attn_mask_type = torch.tensor([attn_mask_type.value], dtype=torch.int)
         hidden_states = tensor_parallel.checkpoint(
-            custom_forward, False, query, key, value, attention_mask, rotary_pos_emb, attn_mask_type
+            custom_forward,
+            False,
+            query,
+            key,
+            value,
+            attention_mask,
+            rotary_pos_emb,
+            attn_mask_type,
         )
 
         return hidden_states
@@ -270,10 +279,16 @@ class Attention(MegatronModule, ABC):
                 inf_max_seq_length = inference_context.max_sequence_length
                 inf_max_batch_size = inference_context.max_batch_size
                 inference_key_memory = self._allocate_memory(
-                    inf_max_seq_length, inf_max_batch_size, self.key_hidden_size, key.dtype
+                    inf_max_seq_length,
+                    inf_max_batch_size,
+                    self.key_hidden_size,
+                    key.dtype,
                 )
                 inference_value_memory = self._allocate_memory(
-                    inf_max_seq_length, inf_max_batch_size, self.val_hidden_size, value.dtype
+                    inf_max_seq_length,
+                    inf_max_batch_size,
+                    self.val_hidden_size,
+                    value.dtype,
                 )
                 inference_context.key_value_memory_dict[self.layer_number] = (
                     inference_key_memory,
@@ -389,8 +404,7 @@ class Attention(MegatronModule, ABC):
         3. Performs the flash attention operation
         """
         assert flash_attn_with_kvcache is not None, (
-            "Flash Decoding requires the flash_attn_with_kvcache kernel, "
-            "available in the flash-attn package."
+            "Flash Decoding requires the flash_attn_with_kvcache kernel, available in the flash-attn package."
         )
         q = query_layer.permute(1, 0, 2, 3)
         k = key_layer.permute(1, 0, 2, 3)
@@ -559,9 +573,9 @@ class Attention(MegatronModule, ABC):
         inference_context = deprecate_inference_params(inference_context, inference_params)
 
         if inference_context and inference_context.is_dynamic_batching():
-            assert HAVE_FA3 or is_fa_min_version(
-                "2.7.3"
-            ), "flash attn verion v2.7.3 and above is required for dynamic batching."
+            assert HAVE_FA3 or is_fa_min_version("2.7.3"), (
+                "flash attn verion v2.7.3 and above is required for dynamic batching."
+            )
 
         # hidden_states: [sq, b, h]
         if self.config.flash_decode and not self.training and inference_context is not None:
@@ -661,7 +675,11 @@ class Attention(MegatronModule, ABC):
                     )
                 else:
                     query = inference_context.apply_rotary_emb_query(
-                        query, q_pos_emb, self.config, cu_seqlens_q, self.model_comm_pgs.cp
+                        query,
+                        q_pos_emb,
+                        self.config,
+                        cu_seqlens_q,
+                        self.model_comm_pgs.cp,
                     )
             if k_pos_emb is not None:
                 key = apply_rotary_pos_emb(
@@ -724,9 +742,9 @@ class Attention(MegatronModule, ABC):
                     kv_lengths_decode_only,
                     block_table,
                 )
-                core_attn_out = rearrange(core_attn_out, 's b h d -> s b (h d)')
+                core_attn_out = rearrange(core_attn_out, "s b h d -> s b (h d)")
 
-        if packed_seq_params is not None and packed_seq_params.qkv_format == 'thd':
+        if packed_seq_params is not None and packed_seq_params.qkv_format == "thd":
             # reshape to same output shape as unpacked case
             # (t, np, hn) -> (t, b=1, h=np*hn)
             # t is the pack size = sum (sq_i)
@@ -778,7 +796,7 @@ class SelfAttention(Attention):
             bias=self.config.add_bias_linear or self.config.add_qkv_bias,
             skip_bias_add=False,
             is_expert=False,
-            tp_comm_buffer_name='qkv',
+            tp_comm_buffer_name="qkv",
             tp_group=self.model_comm_pgs.tp,
         )
 
@@ -836,8 +854,7 @@ class SelfAttention(Attention):
             assert len(srcs) == len(tgts) == len(names)
             for src, tgt, name in zip(srcs, tgts, names):
                 assert torch.all(src == tgt), (
-                    f"Discrepancy between {name} in {parallelism} ranks {i} and {rank}. "
-                    f"Diff: {torch.norm(src - tgt)}"
+                    f"Discrepancy between {name} in {parallelism} ranks {i} and {rank}. Diff: {torch.norm(src - tgt)}"
                 )
 
         for i, dp in enumerate(dp_list):
@@ -901,12 +918,10 @@ class SelfAttention(Attention):
         ]
 
         if SplitAlongDim is not None:
-
             # [sq, b, ng, (np/ng + 2) * hn]
             # --> [sq, b, ng, np/ng * hn], [sq, b, ng, hn], [sq, b, ng, hn]
             (query, key, value) = SplitAlongDim(mixed_qkv, 3, split_arg_list)
         else:
-
             # [sq, b, ng, (np/ng + 2) * hn]
             # --> [sq, b, ng, np/ng * hn], [sq, b, ng, hn], [sq, b, ng, hn]
             (query, key, value) = torch.split(mixed_qkv, split_arg_list, dim=3)

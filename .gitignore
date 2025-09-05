@@ -12,3 +12,5 @@ local/
 wandb/
 onelogger.log
 onelogger.err
+*.DS_Store
+*swp
